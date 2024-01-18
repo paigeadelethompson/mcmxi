@@ -19,3 +19,6 @@
 [submodule "src/mcmxi_sopel_modules/pixelguff/ultrabutt"]
 	path = src/mcmxi_sopel_modules/pixelguff/ultrabutt
 	url = https://github.com/pixelguff/ultrabutt.git
+[submodule "src/mcmxi_sopel_modules/russellb/sopelmods"]
+	path = src/mcmxi_sopel_modules/russellb/sopelmods
+	url = https://github.com/russellb/sopelmods.git
