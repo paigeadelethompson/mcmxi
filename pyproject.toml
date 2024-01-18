@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mcmxi"
-version = "0.1.0"
+version = "2024.1.17"
 description = "IRC bot"
 authors = ["Paige Thompson <paige@paige.bio>"]
 readme = "README.md"
@@ -151,6 +151,12 @@ sopel-dns = {git = "https://github.com/dgw/sopel-dns.git"}
 sopel-diagnosis = {git = "https://github.com/dgw/sopel-diagnosis.git"}
 sopel-flipper = {git = "https://github.com/dgw/sopel-flipper.git"}
 sopel-py = {git = "https://github.com/sopel-irc/sopel-py.git"}
+sopel-amatsukaze = {git = "https://github.com/dgw/sopel-amatsukaze.git"}
+sopel-help-sprunge = {git = "https://github.com/dgw/sopel-help.sprunge.git"}
+sopel-norris = {git = "https://github.com/dgw/sopel-norris.git"}
+sopel-torrentinfo = {git = "https://github.com/dgw/sopel-torrentinfo.git"}
+sopel-motivation = {git = "https://github.com/dgw/sopel-motivation.git"}
+sopel-modules-urban = {git = "https://github.com/dgw/sopel-urban.git"}
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.0.3"

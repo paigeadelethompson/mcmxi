@@ -3699,6 +3699,24 @@ reference = "973a489"
 resolved_reference = "973a489355540d68b95db01a49e983ac7a740bcc"
 
 [[package]]
+name = "sopel-amatsukaze"
+version = "0.1.0"
+description = "A plugin suite for Sopel that emulates most of Yuuki's Java-based Amatsukaze-chan bot."
+optional = false
+python-versions = "*"
+files = []
+develop = false
+
+[package.dependencies]
+sopel = ">=7.1"
+
+[package.source]
+type = "git"
+url = "https://github.com/dgw/sopel-amatsukaze.git"
+reference = "HEAD"
+resolved_reference = "61a2ee77e0f7ebe8f681851851410e6fae2f1417"
+
+[[package]]
 name = "sopel-contextualreminders"
 version = "0.1.dev1"
 description = "Contextual reminders plugin for Sopel"
@@ -3830,6 +3848,25 @@ type = "git"
 url = "https://github.com/sopel-irc/sopel-help.git"
 reference = "HEAD"
 resolved_reference = "2e121ada18c26129b46411cc80750b0f6330d717"
+
+[[package]]
+name = "sopel-help.sprunge"
+version = "1.0.0"
+description = "Sprunge publisher provider for sopel-help plugin"
+optional = false
+python-versions = ">=3.7, <4"
+files = []
+develop = false
+
+[package.dependencies]
+requests = "*"
+sopel-help = ">=0.4.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/dgw/sopel-help.sprunge.git"
+reference = "HEAD"
+resolved_reference = "54720a6cc4123030e6ba69a4f37e65e0a66c11cb"
 
 [[package]]
 name = "sopel-iplookup"
@@ -3966,6 +4003,24 @@ reference = "HEAD"
 resolved_reference = "68bc26b466f2917d52cbecc814f0b49c721946c6"
 
 [[package]]
+name = "sopel_modules.urban"
+version = "1.1.0"
+description = "Urban Dictionary module for Sopel"
+optional = false
+python-versions = "*"
+files = []
+develop = false
+
+[package.dependencies]
+sopel = ">=6.0,<8"
+
+[package.source]
+type = "git"
+url = "https://github.com/dgw/sopel-urban.git"
+reference = "HEAD"
+resolved_reference = "38d7199d9ef5f90ec29ca512f7ac3c35537fdac0"
+
+[[package]]
 name = "sopel_modules.weather"
 version = "1.6.0"
 description = "A working re-implementation of the weather module for Sopel"
@@ -3984,6 +4039,45 @@ type = "git"
 url = "https://github.com/sopel-irc/sopel-weather.git"
 reference = "HEAD"
 resolved_reference = "3506e90c3fae40ab7ed00e8e8a98f96e1d2fc271"
+
+[[package]]
+name = "sopel-motivation"
+version = "0.1.0"
+description = "A Sopel plugin to fetch motivational quotes on command."
+optional = false
+python-versions = "*"
+files = []
+develop = false
+
+[package.dependencies]
+sopel = ">=7.0,<8"
+
+[package.extras]
+jmespath = ["jmespath (>=0.10.0,<0.11.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/dgw/sopel-motivation.git"
+reference = "HEAD"
+resolved_reference = "2bbba23e154e95463d3cd660a39c060320b666f3"
+
+[[package]]
+name = "sopel-norris"
+version = "0.1.0"
+description = "Chuck Norris joke plugin for Sopel IRC bots."
+optional = false
+python-versions = "*"
+files = []
+develop = false
+
+[package.dependencies]
+sopel = ">=7.0,<8"
+
+[package.source]
+type = "git"
+url = "https://github.com/dgw/sopel-norris.git"
+reference = "HEAD"
+resolved_reference = "7f71ea022775e5d222e0dbff9c58671ec3618e11"
 
 [[package]]
 name = "sopel-openweathermap"
@@ -4230,6 +4324,26 @@ type = "git"
 url = "https://github.com/SnoopJ/sopel-subcmd.git"
 reference = "HEAD"
 resolved_reference = "f6e93106b8ecc86f583f948c0ed24513d56d42cd"
+
+[[package]]
+name = "sopel-torrentinfo"
+version = "0.1.0"
+description = "Sopel plugin to fetch info for torrent links."
+optional = false
+python-versions = "*"
+files = []
+develop = false
+
+[package.dependencies]
+cssselect = "*"
+lxml = "*"
+sopel = ">=7.1"
+
+[package.source]
+type = "git"
+url = "https://github.com/dgw/sopel-torrentinfo.git"
+reference = "HEAD"
+resolved_reference = "8e73324574b97b11e220a9dacf33f3f8e56ce758"
 
 [[package]]
 name = "sopel-twitter"
@@ -5120,4 +5234,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "3c5d8e208bc47150d18fdc23b1470fa0c359b28840f28eaa6ae7edb5faa48e17"
+content-hash = "49b7796b88fb5f156921a30d29c078da0ec98c31c271d4c950ef9200a933389e"
