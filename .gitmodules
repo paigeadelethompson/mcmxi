@@ -7,3 +7,6 @@
 [submodule "src/mcmxi_sopel_modules/jinpark/phenny_modules"]
 	path = src/mcmxi_sopel_modules/jinpark/phenny_modules
 	url = https://github.com/jinpark/phenny-modules.git
+[submodule "src/mcmxi_sopel_modules/jwinterm/monerobux"]
+	path = src/mcmxi_sopel_modules/jwinterm/monerobux
+	url = https://github.com/jwinterm/monerobux.git
