@@ -10,3 +10,6 @@
 [submodule "src/mcmxi_sopel_modules/jwinterm/monerobux"]
 	path = src/mcmxi_sopel_modules/jwinterm/monerobux
 	url = https://github.com/jwinterm/monerobux.git
+[submodule "src/mcmxi_sopel_modules/kic0/Block0"]
+	path = src/mcmxi_sopel_modules/kic0/Block0
+	url = https://github.com/kic0/Block0.git
