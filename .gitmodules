@@ -1,0 +1,9 @@
+[submodule "src/mcmxi_sopel_modules/cottongin/sopel_modules"]
+	path = src/mcmxi_sopel_modules/cottongin/sopel_modules
+	url = https://github.com/cottongin/sopel-modules.git
+[submodule "src/mcmxi_sopel_modules/dasu/syrup_sopel_modules"]
+	path = src/mcmxi_sopel_modules/dasu/syrup_sopel_modules
+	url = https://github.com/dasu/syrup-sopel-modules.git
+[submodule "src/mcmxi_sopel_modules/jinpark/phenny_modules"]
+	path = src/mcmxi_sopel_modules/jinpark/phenny_modules
+	url = https://github.com/jinpark/phenny-modules.git
