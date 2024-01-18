@@ -1,14 +1,12 @@
 import itertools as ITER
 import json as JSON
 import logging as L
-import sys as S
 import textwrap as TXT
 import urllib.parse as URL
 import types as TYPES
 from ipaddress import IPv4Network as N4, IPv6Network as N6
 import requests as WWW
 from dns import resolver as DNS
-from bs4 import BeautifulSoup as HTML
 import ast as AST
 from pyroute2.iproute import IPRoute as IP
 from sopel.logger import get_logger
@@ -54,8 +52,8 @@ def cmd_ip(bot, trigger) -> None:
 @module.commands('asn')
 @module.example('asn 65534')
 def cmd_asn(bot, trigger) -> None:
-    logger   = get_logger(__name__)
-    TERM_BIN = term_bin()
+    get_logger(__name__)
+    term_bin()
     IRC_TXT  = irc_text_formatting()
 
     res = JSON.loads(WWW.get(
@@ -203,7 +201,7 @@ def cmd_searx(bot, trigger) -> None:
 @module.commands('cidr')
 @module.example('cidr 100.64.0.0/10')
 def cmd_cidr(bot, trigger) -> None:
-    logger  = get_logger(__name__)
+    get_logger(__name__)
     IRC_TXT = irc_text_formatting()
 
     [ bot.say(x) for x in map(lambda c: '''
@@ -252,7 +250,7 @@ def cmd_cidr(bot, trigger) -> None:
 @module.commands('dns')
 @module.example('dns A google.com')
 def cmd_dns(bot, trigger) -> None:
-    logger  = get_logger(__name__)
+    get_logger(__name__)
     IRC_TXT = irc_text_formatting()
     args    = trigger.args[1].split(' ')[1: ]
     rdtype  = (len(args) > 1) and args[ 0 ] or "A"
