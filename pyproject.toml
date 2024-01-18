@@ -1,0 +1,58 @@
+[tool.poetry]
+name = "mcmxi"
+version = "0.1.0"
+description = "IRC bot"
+authors = ["Paige Thompson <paige@paige.bio>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyfiglet = "^1.0.2"
+pyjokes = "^0.6.0"
+pytz = "^2023.3.post1"
+sopel = {git = "https://github.com/sopel-irc/sopel.git", rev = "973a489"}
+sopel-hackernews = {git = "https://github.com/sopel-irc/sopel-hackernews.git"}
+sopel-modules-weather = {git = "https://github.com/sopel-irc/sopel-weather.git"}
+sopel-ipython = {git = "https://github.com/sopel-irc/sopel-ipython.git"}
+sopel-help = {git = "https://github.com/sopel-irc/sopel-help.git"}
+sopel-pypi = {git = "https://github.com/sopel-irc/sopel-pypi.git"}
+sopel-remind = {git = "https://github.com/sopel-irc/sopel-remind.git"}
+sopel-iplookup = {git = "https://github.com/sopel-irc/sopel-iplookup.git"}
+sopel-twitter = {git = "https://github.com/sopel-irc/sopel-twitter.git", rev = "742c663"}
+sopel-modules-stocks = {git = "https://github.com/sopel-irc/sopel-stocks.git"}
+sopel-meetbot = {git = "https://github.com/sopel-irc/sopel-meetbot.git"}
+#sopel-reddit = {git = "https://github.com/sopel-irc/sopel-reddit.git", rev = "adbb004"}
+sopel-modules-cryptocurrency = {git = "https://github.com/RustyBower/sopel-cryptocurrency.git"}
+#sopel-modules-sopel-discord = {git = "https://github.com/pmrowla/sopel-discord.git"}
+sopel-modules-sports = {git = "https://github.com/RustyBower/sopel-sports.git"}
+sopel-openweathermap = {git = "https://github.com/davidpirogov/sopel-openweathermap.git"}
+recherche-babac2 = {git = "https://github.com/normcyr/recherche_babac2.git"}
+sopel-pets = {git = "https://github.com/RustyBower/sopel-pets.git"}
+sopel-contextualreminders = {git = "https://github.com/davidpirogov/sopel-contextualreminders.git"}
+click = "^8.1.7"
+cssselect = "^1.2.0"
+decorator = "^5.1.1"
+feedparser = "^6.0.11"
+future = "^0.18.3"
+geocoder = "^1.38.1"
+htmlparser = "^0.0.2"
+inflect = "^7.0.0"
+jaraco-itertools = "^6.4.1"
+lxml = "^5.1.0"
+more-itertools = "^10.2.0"
+praw = "^7.7.1"
+pyenchant = "^3.2.2"
+pygeoip = "^0.3.2"
+pymongo = "^4.6.1"
+ratelim = "^0.1.6"
+requests = "^2.31.0"
+six = "^1.16.0"
+update-checker = "^0.18.0"
+wheel = "^0.42.0"
+wolframalpha = "^5.0.0"
+xmltodict = "^0.13.0"
+ipaddress = "^1.0.23"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,4 @@
+*.db
+markov.py
+*.pyc
+.vscode
