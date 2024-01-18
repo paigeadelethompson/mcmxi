@@ -16,3 +16,6 @@
 [submodule "src/mcmxi_sopel_modules/pilate/sopel_modules"]
 	path = src/mcmxi_sopel_modules/pilate/sopel_modules
 	url = https://github.com/pilate/sopel-modules.git
+[submodule "src/mcmxi_sopel_modules/pixelguff/ultrabutt"]
+	path = src/mcmxi_sopel_modules/pixelguff/ultrabutt
+	url = https://github.com/pixelguff/ultrabutt.git
