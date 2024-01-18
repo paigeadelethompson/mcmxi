@@ -66,7 +66,6 @@ try:
     from mcmxi_sopel_modules.dasu.syrup_sopel_modules.wemo import *
     from mcmxi_sopel_modules.dasu.syrup_sopel_modules.worldcup import *
     from mcmxi_sopel_modules.dasu.syrup_sopel_modules.ygo import *
-    from mcmxi_sopel_modules.dasu.syrup_sopel_modules.youtoob import *
 except Exception as e:
     print(e)
 
@@ -141,5 +140,10 @@ try:
     from mcmxi_sopel_modules.sopel_irc.sopel_extras.roulette import *
     from mcmxi_sopel_modules.sopel_irc.sopel_extras.slap import *
     from mcmxi_sopel_modules.sopel_irc.sopel_extras.whois import *
+except Exception as e:
+    print(e)
+
+try:
+    from mcmxi_sopel_modules.nc.adderall.adderall import *
 except Exception as e:
     print(e)

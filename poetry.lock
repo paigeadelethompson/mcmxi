@@ -3032,6 +3032,19 @@ files = [
 ]
 
 [[package]]
+name = "pyroute2"
+version = "0.7.11"
+description = "Python Netlink library"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pyroute2-0.7.11-py3-none-any.whl", hash = "sha256:95852e702149b3d6abc8484d3291c38c45660168e8db76e5566a60ef0e133d5b"},
+]
+
+[package.dependencies]
+win-inet-pton = {version = "*", markers = "platform_system == \"Windows\""}
+
+[[package]]
 name = "pysocks"
 version = "1.7.1"
 description = "A Python SOCKS client module. See https://github.com/Anorov/PySocks for more information."
@@ -4800,6 +4813,17 @@ files = [
 test = ["pytest (>=3.0.0)", "pytest-cov"]
 
 [[package]]
+name = "win-inet-pton"
+version = "1.1.0"
+description = "Native inet_pton and inet_ntop implementation for Python on Windows (with ctypes)."
+optional = false
+python-versions = "*"
+files = [
+    {file = "win_inet_pton-1.1.0-py2.py3-none-any.whl", hash = "sha256:eaf0193cbe7152ac313598a0da7313fb479f769343c0c16c5308f64887dc885b"},
+    {file = "win_inet_pton-1.1.0.tar.gz", hash = "sha256:dd03d942c0d3e2b1cf8bab511844546dfa5f74cb61b241699fa379ad707dea4f"},
+]
+
+[[package]]
 name = "wolframalpha"
 version = "5.0.0"
 description = "Wolfram|Alpha 2.0 API client"
@@ -4842,6 +4866,17 @@ python-versions = ">=3.4"
 files = [
     {file = "xmltodict-0.13.0-py2.py3-none-any.whl", hash = "sha256:aa89e8fd76320154a40d19a0df04a4695fb9dc5ba977cbb68ab3e4eb225e7852"},
     {file = "xmltodict-0.13.0.tar.gz", hash = "sha256:341595a488e3e01a85a9d8911d8912fd922ede5fecc4dce437eb4b6c8d037e56"},
+]
+
+[[package]]
+name = "xyfny"
+version = "0.0.11"
+description = "Reworking of xyppy"
+optional = false
+python-versions = "*"
+files = [
+    {file = "xyfny-0.0.11-py3-none-any.whl", hash = "sha256:07a7a50f7daba1d865ede862af96cb1ef6533758094f5ed2f762ada20089cae1"},
+    {file = "xyfny-0.0.11.tar.gz", hash = "sha256:c12cf9ba44edf43dd8d673223125a06ab0a321045f50d6d31b0e093afade5ba0"},
 ]
 
 [[package]]
@@ -5085,4 +5120,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "3ea5652b5a7179de9e34835b895986a9283cbf6ef0e85e5edfc250dcc2b8bb40"
+content-hash = "3c5d8e208bc47150d18fdc23b1470fa0c359b28840f28eaa6ae7edb5faa48e17"

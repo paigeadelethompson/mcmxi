@@ -22,6 +22,7 @@ exclude = ["src/mcmxi_sopel_modules/cottongin/sopel_modules/food.py",
         "src/mcmxi_sopel_modules/dasu/syrup_sopel_modules/trivia.py",
         "src/mcmxi_sopel_modules/dasu/syrup_sopel_modules/url2.py",
         "src/mcmxi_sopel_modules/dasu/syrup_sopel_modules/vndb.py",
+        "src/mcmxi_sopel_modules/dasu/syrup_sopel_modules/yootoob.py",
         "src/mcmxi_sopel_modules/jinpark/phenny_modules/air-quality.py",
         "src/mcmxi_sopel_modules/jinpark/phenny_modules/google_search.py",
         "src/mcmxi_sopel_modules/jinpark/phenny_modules/new-clock.py",
@@ -115,6 +116,8 @@ opencv-python = "^4.9.0.80"
 ddict = "^0.1.3"
 ddate = "^0.1.2"
 googlesearch-python = "^1.2.3"
+pyroute2 = "^0.7.11"
+xyfny = "^0.0.11"
 sopel = {git = "https://github.com/sopel-irc/sopel.git", rev = "973a489"}
 sopel-hackernews = {git = "https://github.com/sopel-irc/sopel-hackernews.git"}
 sopel-modules-weather = {git = "https://github.com/sopel-irc/sopel-weather.git"}
@@ -126,9 +129,7 @@ sopel-iplookup = {git = "https://github.com/sopel-irc/sopel-iplookup.git"}
 sopel-twitter = {git = "https://github.com/sopel-irc/sopel-twitter.git", rev = "742c663"}
 sopel-modules-stocks = {git = "https://github.com/sopel-irc/sopel-stocks.git"}
 sopel-meetbot = {git = "https://github.com/sopel-irc/sopel-meetbot.git"}
-#sopel-reddit = {git = "https://github.com/sopel-irc/sopel-reddit.git", rev = "adbb004"}
 sopel-modules-cryptocurrency = {git = "https://github.com/RustyBower/sopel-cryptocurrency.git"}
-#sopel-modules-sopel-discord = {git = "https://github.com/pmrowla/sopel-discord.git"}
 sopel-modules-sports = {git = "https://github.com/RustyBower/sopel-sports.git"}
 sopel-openweathermap = {git = "https://github.com/davidpirogov/sopel-openweathermap.git"}
 recherche-babac2 = {git = "https://github.com/normcyr/recherche_babac2.git"}
