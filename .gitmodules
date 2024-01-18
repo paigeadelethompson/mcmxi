@@ -22,3 +22,6 @@
 [submodule "src/mcmxi_sopel_modules/russellb/sopelmods"]
 	path = src/mcmxi_sopel_modules/russellb/sopelmods
 	url = https://github.com/russellb/sopelmods.git
+[submodule "src/mcmxi_sopel_modules/sopel_irc/sopel_extras"]
+	path = src/mcmxi_sopel_modules/sopel_irc/sopel_extras
+	url = https://github.com/sopel-irc/sopel-extras.git
