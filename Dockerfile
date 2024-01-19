@@ -24,4 +24,8 @@ ADD . /home/mcmxi
 
 RUN poetry install
 
+VOLUME /home/mcmxi/.mcmxi
+
+RUN poetry run mcmxi
+
 ENTRYPOINT ["poetry", "run", "mcmxi"]

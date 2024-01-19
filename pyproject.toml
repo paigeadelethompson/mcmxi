@@ -116,6 +116,9 @@ ddate = "^0.1.2"
 googlesearch-python = "^1.2.3"
 pyroute2 = "^0.7.11"
 xyfny = "^0.0.11"
+yahooquery = "^2.3.7"
+openai = "^1.8.0"
+tmdbsimple = "^2.9.1"
 sopel = {git = "https://github.com/sopel-irc/sopel.git", rev = "973a489"}
 sopel-hackernews = {git = "https://github.com/sopel-irc/sopel-hackernews.git"}
 sopel-modules-weather = {git = "https://github.com/sopel-irc/sopel-weather.git"}
@@ -155,9 +158,6 @@ sopel-norris = {git = "https://github.com/dgw/sopel-norris.git"}
 sopel-torrentinfo = {git = "https://github.com/dgw/sopel-torrentinfo.git"}
 sopel-motivation = {git = "https://github.com/dgw/sopel-motivation.git"}
 sopel-modules-urban = {git = "https://github.com/dgw/sopel-urban.git"}
-yahooquery = "^2.3.7"
-openai = "^1.8.0"
-tmdbsimple = "^2.9.1"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.0.3"
@@ -182,9 +182,6 @@ mcmxi = "mcmxi_sopel_modules"
 
 [tool.pylint.messages_control]
 errors-only = true
-ignored-modules = [
-    "subprocess"
-]
 
 [tool.autopep8]
 max_line_length = 79
