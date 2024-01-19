@@ -60,7 +60,6 @@ try:
     from mcmxi_sopel_modules.dasu.syrup_sopel_modules.twitch import *
     from mcmxi_sopel_modules.dasu.syrup_sopel_modules.twitter import *
     from mcmxi_sopel_modules.dasu.syrup_sopel_modules.urbandict import *
-    from mcmxi_sopel_modules.dasu.syrup_sopel_modules.wafflebot import *
     from mcmxi_sopel_modules.dasu.syrup_sopel_modules.wait import *
     from mcmxi_sopel_modules.dasu.syrup_sopel_modules.weather2 import *
     from mcmxi_sopel_modules.dasu.syrup_sopel_modules.wemo import *
