@@ -17,7 +17,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: '3.x'
+        python-version: '3.11'
     - name: Apt install dependencies
       run: |
         sudo apt-get update ; sudo apt-get -y install ; sudo apt-get -y install libaspell-dev libsqlite3-dev
