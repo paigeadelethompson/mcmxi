@@ -132,32 +132,32 @@ sopel-modules-stocks = {git = "https://github.com/sopel-irc/sopel-stocks.git"}
 sopel-meetbot = {git = "https://github.com/sopel-irc/sopel-meetbot.git"}
 sopel-modules-cryptocurrency = {git = "https://github.com/RustyBower/sopel-cryptocurrency.git"}
 sopel-modules-sports = {git = "https://github.com/RustyBower/sopel-sports.git"}
-sopel-openweathermap = {git = "https://github.com/davidpirogov/sopel-openweathermap.git"}
+#sopel-openweathermap = {git = "https://github.com/davidpirogov/sopel-openweathermap.git"}
 recherche-babac2 = {git = "https://github.com/normcyr/recherche_babac2.git"}
-sopel-pets = {git = "https://github.com/RustyBower/sopel-pets.git"}
+#sopel-pets = {git = "https://github.com/RustyBower/sopel-pets.git"}
 sopel-contextualreminders = {git = "https://github.com/davidpirogov/sopel-contextualreminders.git"}
 sopel-plugins-channelmgnt = {git = "https://github.com/FOSSBots/sopel-channelmgnt.git"}
 eliza-py = {git = "https://github.com/jezhiggins/eliza.py.git"}
 sopel-rainbow = {git = "https://github.com/sopel-irc/sopel-rainbow.git"}
 sopel-spellcheck = {git = "https://github.com/sopel-irc/sopel-spellcheck.git"}
-sopel-rtfm = {git = "https://github.com/sopel-irc/sopel-rtfm.git"}
-sopel-slap = {git = "https://github.com/sopel-irc/sopel-slap.git"}
+#sopel-rtfm = {git = "https://github.com/sopel-irc/sopel-rtfm.git"}
+#sopel-slap = {git = "https://github.com/sopel-irc/sopel-slap.git"}
 sopel-waifu = {git = "https://github.com/dgw/sopel-waifu.git"}
 sopel-mastodon = {git = "https://github.com/SnoopJ/sopel-mastodon.git"}
 sopel-spongemock = {git = "https://github.com/SnoopJ/sopel-spongemock.git"}
 sopel-subcmd = {git = "https://github.com/SnoopJ/sopel-subcmd.git"}
 sopel-deepl = {git = "https://github.com/dgw/sopel-deepl.git"}
-sopel-senpainotice = {git = "https://github.com/dgw/sopel-senpainotice.git"}
+#sopel-senpainotice = {git = "https://github.com/dgw/sopel-senpainotice.git"}
 sopel-dns = {git = "https://github.com/dgw/sopel-dns.git"}
-sopel-diagnosis = {git = "https://github.com/dgw/sopel-diagnosis.git"}
+#sopel-diagnosis = {git = "https://github.com/dgw/sopel-diagnosis.git"}
 sopel-flipper = {git = "https://github.com/dgw/sopel-flipper.git"}
 sopel-py = {git = "https://github.com/sopel-irc/sopel-py.git"}
 sopel-amatsukaze = {git = "https://github.com/dgw/sopel-amatsukaze.git"}
 sopel-help-sprunge = {git = "https://github.com/dgw/sopel-help.sprunge.git"}
-sopel-norris = {git = "https://github.com/dgw/sopel-norris.git"}
+#sopel-norris = {git = "https://github.com/dgw/sopel-norris.git"}
 sopel-torrentinfo = {git = "https://github.com/dgw/sopel-torrentinfo.git"}
-sopel-motivation = {git = "https://github.com/dgw/sopel-motivation.git"}
-sopel-modules-urban = {git = "https://github.com/dgw/sopel-urban.git"}
+#sopel-motivation = {git = "https://github.com/dgw/sopel-motivation.git"}
+#sopel-modules-urban = {git = "https://github.com/dgw/sopel-urban.git"}
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.0.3"
