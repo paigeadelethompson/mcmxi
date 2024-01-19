@@ -73,7 +73,6 @@ geocoder = "^1.38.1"
 htmlparser = "^0.0.2"
 inflect = "^7.0.0"
 jaraco-itertools = "^6.4.1"
-lxml = "^5.1.0"
 more-itertools = "^10.2.0"
 praw = "^7.7.1"
 pyenchant = "^3.2.2"
@@ -157,6 +156,9 @@ sopel-norris = {git = "https://github.com/dgw/sopel-norris.git"}
 sopel-torrentinfo = {git = "https://github.com/dgw/sopel-torrentinfo.git"}
 sopel-motivation = {git = "https://github.com/dgw/sopel-motivation.git"}
 sopel-modules-urban = {git = "https://github.com/dgw/sopel-urban.git"}
+yahooquery = "^2.3.7"
+openai = "^1.8.0"
+tmdbsimple = "^2.9.1"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.0.3"

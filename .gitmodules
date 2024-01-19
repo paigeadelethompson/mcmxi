@@ -25,3 +25,6 @@
 [submodule "src/mcmxi_sopel_modules/sopel_irc/sopel_extras"]
 	path = src/mcmxi_sopel_modules/sopel_irc/sopel_extras
 	url = https://github.com/sopel-irc/sopel-extras.git
+[submodule "src/mcmxi_sopel_modules/klppl/sopel_modules"]
+	path = src/mcmxi_sopel_modules/klppl/sopel_modules
+	url = https://github.com/klppl/sopel-modules.git
