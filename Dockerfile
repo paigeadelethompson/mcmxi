@@ -12,19 +12,21 @@ RUN mkdir /home/mcmxi
 
 RUN adduser --home /home/mcmxi mcmxi
 
+ENV HOME /home/mcmxi
+
+RUN mkdir -p /usr/src/mcmxi
+
+WORKDIR /usr/src/mcmxi
+
+ADD . /usr/src/mcmxi
+
 RUN chown -R mcmxi /home/mcmxi
 
 USER mcmxi
 
-ENV HOME /home/mcmxi
-
-WORKDIR /home/mcmxi
-
-ADD . /home/mcmxi
+VOLUME /home/mcmxi
 
 RUN poetry install
-
-VOLUME /home/mcmxi/.mcmxi
 
 RUN poetry run mcmxi
 
