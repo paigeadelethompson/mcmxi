@@ -27,5 +27,6 @@ def main():
                 new_cfg = open(Path.home() / Path(".mcmxi") / Path("sopel.cfg"), "w")
                 new_cfg.write(dat)
                 print("Created default configuration file, please edit: ~/.mcmxi/sopel.cfg")
+                sys.exit(0)
         
     sopel_main()
