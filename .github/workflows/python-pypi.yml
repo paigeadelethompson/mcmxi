@@ -20,7 +20,7 @@ jobs:
         python-version: '3.x'
     - name: Apt install dependencies
       run: |
-        sudo apt-get update ; sudo apt-get -y install
+        sudo apt-get update ; sudo apt-get -y install ; sudo apt-get -y install libaspell-dev
     - name: Install Python tools
       run: |
         python -m pip install --upgrade pip
