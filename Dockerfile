@@ -30,4 +30,4 @@ RUN poetry install
 
 RUN poetry run mcmxi
 
-ENTRYPOINT ["poetry", "run", "mcmxi"]
+ENTRYPOINT ["poetry"]
