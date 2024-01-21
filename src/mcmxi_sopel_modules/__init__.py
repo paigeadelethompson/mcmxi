@@ -134,7 +134,6 @@ except Exception as e:
 try:
     from mcmxi_sopel_modules.sopel_irc.sopel_extras.bomb import *
     from mcmxi_sopel_modules.sopel_irc.sopel_extras.document import *
-    from mcmxi_sopel_modules.sopel_irc.sopel_extras.helpbot import *
     from mcmxi_sopel_modules.sopel_irc.sopel_extras.multimessage import *
     from mcmxi_sopel_modules.sopel_irc.sopel_extras.roulette import *
     from mcmxi_sopel_modules.sopel_irc.sopel_extras.slap import *
