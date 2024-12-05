@@ -1,3 +1,6 @@
+# Shelved
+This was kinda cool the one time it worked and then it was a terrible use of poetry 
+
 # Quick start
  
 - initialize the bot `mkdir /mcmxi ; chmod -R 777 /mcmxi ; docker run -it --rm -v /mcmxi:/home/mcmxi paigeadele/mcmxi install`
