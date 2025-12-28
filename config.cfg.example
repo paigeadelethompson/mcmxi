@@ -1,0 +1,64 @@
+[core]
+nick = MCMXI
+host = irc.supernets.org
+port = 6697
+use_ssl = true
+verify_ssl = false
+channels = #mcmxi
+owner = mcmxi
+admins = mcmxi
+user = mcmxi
+timeout = 120
+prefix = \`
+extra = modules/
+auth_method = nickserv
+auth_password = changeme
+auth_target = NickServ
+flood_burst_lines = 999999
+flood_empty_wait = 0.125
+flood_refill_rate = 999999
+exclude =
+    wiktionary
+    ping
+    lmgtfy
+    choose
+    isup
+    search
+    url
+    announce
+    wikipedia
+    xkcd
+    unicode_info
+    admin
+    version
+    translate
+    currency
+    dice
+    countdown
+    uptime
+    find_updates
+    invite
+    tell
+    emoticons
+    clock
+    calc
+    adminchannel
+    reload
+    pronouns
+    units
+    rand
+    tld
+    seen
+    safety
+    find
+
+[admin]
+hold_ground = true
+auto_accept_invites = true
+
+[log]
+logging = true
+filename = logs/sopel.log
+console = true
+level = INFO
+
