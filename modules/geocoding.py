@@ -3,13 +3,14 @@ Sopel module for Geocoding APIs.
 Supports 42 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter, GraphQLClient
+from common import GraphQLClient, HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -315,59 +316,6 @@ APIS = [
 ]
 
 
-@plugin.command('geocoding')
-@plugin.command('geocoding')
-@plugin.example(f'.geocoding')
-def geocoding_list(bot, trigger):
-    """List all available Geocoding APIs."""
-    bot.say(f'Available Geocoding APIs (42):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .geocoding_info <name> for details')
-
-
-@plugin.command('geocoding_info')
-@plugin.example(f'.geocoding_info <name>')
-def geocoding_info(bot, trigger):
-    """Get information about a specific Geocoding API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .geocoding_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('geocoding_search')
-@plugin.example(f'.geocoding_search <query>')
-def geocoding_search(bot, trigger):
-    """Search Geocoding APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .geocoding_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 @plugin.command('geo_country')
@@ -375,17 +323,17 @@ def geocoding_search(bot, trigger):
 def geo_country(bot, trigger):
     """Get country information from IP using Country API."""
     logger.info('Fetching country info from IP')
-    
+
     url = 'https://api.country.is/'
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch country data.')
         return
-    
+
     country = data.get('country', 'Unknown')
     ip = data.get('ip', 'Unknown')
-    
+
     response = f"IP: {formatter.monospace(ip)} | Country: {formatter.bold(country)}"
     bot.say(formatter.truncate(response, max_len=400))
 
@@ -399,7 +347,7 @@ def geo_geographql(bot, trigger):
     """Query geographic data using GeographQL API."""
     # GeographQL: https://geographql.netlify.app
     # Endpoint: https://api.geographql.rudio.dev/graphql
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .geo_geographql <type> [options]')
         bot.notice(trigger.nick, 'Types: countries, country, states, cities')
@@ -408,10 +356,10 @@ def geo_geographql(bot, trigger):
         bot.notice(trigger.nick, '          .geo_geographql states country:US')
         bot.notice(trigger.nick, '          .geo_geographql cities state:California country:US')
         return
-    
+
     query_parts = trigger.group(2).strip().split()
     query_type = query_parts[0].lower()
-    
+
     # Parse options
     options = {}
     limit = 10
@@ -426,11 +374,11 @@ def geo_geographql(bot, trigger):
                         limit = 10
                 except ValueError:
                     limit = 10
-    
+
     logger.info(f'GeographQL query: {query_type}, options: {options}')
-    
+
     gql_client = GraphQLClient('https://api.geographql.rudio.dev/graphql')
-    
+
     if query_type == 'countries':
         # List all countries
         query = """
@@ -446,13 +394,13 @@ def geo_geographql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'first': limit})
-        
+
         if result and 'countries' in result:
             countries = result.get('countries', {}).get('edges', [])
             if not countries:
                 bot.notice(trigger.nick, 'No countries found.')
                 return
-            
+
             bot.say(f'Countries (showing {len(countries)}):')
             for edge in countries[:limit]:
                 node = edge.get('node', {})
@@ -462,7 +410,7 @@ def geo_geographql(bot, trigger):
                 bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, 'Failed to fetch countries.')
-    
+
     elif query_type == 'country':
         # Get single country by code
         country_code = options.get('code', '').upper()
@@ -470,7 +418,7 @@ def geo_geographql(bot, trigger):
             bot.notice(trigger.nick, 'Usage: .geo_geographql country code:<country_code>')
             bot.notice(trigger.nick, 'Example: .geo_geographql country code:US')
             return
-        
+
         query = """
         query GetCountry($code: ID!) {
             country(code: $code) {
@@ -486,19 +434,19 @@ def geo_geographql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'code': country_code})
-        
+
         if result and 'country' in result:
             country = result.get('country')
             if not country:
                 bot.notice(trigger.nick, f'Country with code "{country_code}" not found.')
                 return
-            
+
             name = country.get('name', 'Unknown')
             code = country.get('code', country_code)
             capital = country.get('capital', '')
             currency = country.get('currency', '')
             states = country.get('states', [])
-            
+
             response = f"{formatter.bold(name)} ({formatter.monospace(code)})"
             if capital:
                 response += f" | Capital: {formatter.italic(capital)}"
@@ -509,7 +457,7 @@ def geo_geographql(bot, trigger):
             bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, f'Failed to fetch country "{country_code}".')
-    
+
     elif query_type == 'states':
         # Get states for a country
         country_code = options.get('country', '').upper()
@@ -517,7 +465,7 @@ def geo_geographql(bot, trigger):
             bot.notice(trigger.nick, 'Usage: .geo_geographql states country:<country_code>')
             bot.notice(trigger.nick, 'Example: .geo_geographql states country:US')
             return
-        
+
         query = """
         query GetStates($code: ID!) {
             country(code: $code) {
@@ -530,19 +478,19 @@ def geo_geographql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'code': country_code})
-        
+
         if result and 'country' in result:
             country = result.get('country')
             if not country:
                 bot.notice(trigger.nick, f'Country "{country_code}" not found.')
                 return
-            
+
             country_name = country.get('name', country_code)
             states = country.get('states', [])
             if not states:
                 bot.notice(trigger.nick, f'No states found for {country_name}.')
                 return
-            
+
             bot.say(f'States in {formatter.bold(country_name)} (showing {min(limit, len(states))}):')
             for state in states[:limit]:
                 code = state.get('code', '')
@@ -553,17 +501,17 @@ def geo_geographql(bot, trigger):
                 bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, f'Failed to fetch states for country "{country_code}".')
-    
+
     elif query_type == 'cities':
         # Get cities for a state/country
         country_code = options.get('country', '').upper()
         state_name = options.get('state', '')
-        
+
         if not country_code:
             bot.notice(trigger.nick, 'Usage: .geo_geographql cities country:<code> [state:<name>]')
             bot.notice(trigger.nick, 'Example: .geo_geographql cities country:US state:California')
             return
-        
+
         query = """
         query GetCities($code: ID!) {
             country(code: $code) {
@@ -580,32 +528,32 @@ def geo_geographql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'code': country_code})
-        
+
         if result and 'country' in result:
             country = result.get('country')
             if not country:
                 bot.notice(trigger.nick, f'Country "{country_code}" not found.')
                 return
-            
+
             country_name = country.get('name', country_code)
             states = country.get('states', [])
-            
+
             # Filter by state if specified
             if state_name:
                 states = [s for s in states if state_name.lower() in s.get('name', '').lower()]
-            
+
             if not states:
-                bot.notice(trigger.nick, f'No states found matching criteria.')
+                bot.notice(trigger.nick, 'No states found matching criteria.')
                 return
-            
+
             state = states[0]
             state_name_actual = state.get('name', 'Unknown')
             cities = state.get('cities', [])
-            
+
             if not cities:
                 bot.notice(trigger.nick, f'No cities found for {state_name_actual}.')
                 return
-            
+
             bot.say(f'Cities in {formatter.bold(state_name_actual)}, {country_name} (showing {min(limit, len(cities))}):')
             for city in cities[:limit]:
                 name = city.get('name', 'Unknown')
@@ -616,14 +564,15 @@ def geo_geographql(bot, trigger):
                     response += f" | {formatter.monospace(f'{lat}, {lon}')}"
                 bot.say(formatter.truncate(response, max_len=400))
         else:
-            bot.notice(trigger.nick, f'Failed to fetch cities.')
-    
+            bot.notice(trigger.nick, 'Failed to fetch cities.')
+
     else:
         bot.notice(trigger.nick, f'Unknown query type: {query_type}. Use: countries, country, states, or cities')
 
 
 def setup(bot):
     """Module setup - Geocoding APIs loaded."""
+    register_apis('geocoding', APIS)
     bot.memory['geocoding_loaded'] = True
     bot.memory['geocoding_count'] = 42
     logger.info('Geocoding module loaded')

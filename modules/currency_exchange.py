@@ -3,18 +3,18 @@ Sopel module for Currency Exchange APIs.
 Supports 7 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
 formatter = IRCFormatter()
-
 
 # API definitions
 APIS = [
@@ -69,62 +69,6 @@ APIS = [
     },
 ]
 
-
-@plugin.command('currency_exchange')
-@plugin.command('currencyexchange')
-@plugin.example(f'.currency_exchange')
-def currency_exchange_list(bot, trigger):
-    """List all available Currency Exchange APIs."""
-    bot.say(f'Available Currency Exchange APIs (7):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .currency_exchange_info <name> for details')
-
-
-@plugin.command('currency_exchange_info')
-@plugin.example(f'.currency_exchange_info <name>')
-def currency_exchange_info(bot, trigger):
-    """Get information about a specific Currency Exchange API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .currency_exchange_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('currency_exchange_search')
-@plugin.example(f'.currency_exchange_search <query>')
-def currency_exchange_search(bot, trigger):
-    """Search Currency Exchange APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .currency_exchange_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
-
-
 @plugin.command('currency_frankfurter')
 @plugin.example('.currency_frankfurter USD EUR')
 @plugin.example('.currency_frankfurter 100 USD EUR')
@@ -135,9 +79,9 @@ def currency_frankfurter(bot, trigger):
         bot.notice(trigger.nick, 'Example: .currency_frankfurter USD EUR')
         bot.notice(trigger.nick, 'Example: .currency_frankfurter 100 USD EUR')
         return
-    
+
     parts = trigger.group(2).strip().upper().split()
-    
+
     if len(parts) == 2:
         # Just currencies: USD EUR
         amount = 1.0
@@ -155,37 +99,36 @@ def currency_frankfurter(bot, trigger):
     else:
         bot.notice(trigger.nick, 'Invalid format. Use: [amount] <from> <to>')
         return
-    
+
     logger.info(f'Currency conversion: {amount} {from_curr} to {to_curr}')
-    
+
     url = f'https://api.frankfurter.app/latest?from={http.quote(from_curr)}&to={http.quote(to_curr)}'
-    
+
     logger.debug(f'Fetching exchange rate: {url}')
     data = http.get(url)
-    
+
     if not data or 'rates' not in data:
         bot.notice(trigger.nick, 'Failed to fetch exchange rate. Please try again.')
         return
-    
+
     rate = data.get('rates', {}).get(to_curr)
     if not rate:
         bot.notice(trigger.nick, f'Currency {to_curr} not found in response.')
         return
-    
+
     converted = amount * rate
     date = data.get('date', 'Unknown')
-    
+
     response = f"{formatter.bold(f'{amount:,.2f}')} {formatter.monospace(from_curr)} = {formatter.bold(f'{converted:,.2f}')} {formatter.monospace(to_curr)}"
     response += f" | Rate: {formatter.monospace(f'{rate:.4f}')} | Date: {date}"
     bot.say(formatter.truncate(response, max_len=400))
 
-
 def setup(bot):
     """Module setup - Currency Exchange APIs loaded."""
+    register_apis('currency_exchange', APIS)
     bot.memory['currency_exchange_loaded'] = True
     bot.memory['currency_exchange_count'] = 7
     logger.info('Currency Exchange module loaded')
-
 
 def shutdown(bot):
     """Module shutdown."""

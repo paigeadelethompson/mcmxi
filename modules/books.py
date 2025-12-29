@@ -3,13 +3,14 @@ Sopel module for Books APIs.
 Supports 16 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -133,59 +134,6 @@ APIS = [
 ]
 
 
-@plugin.command('books')
-@plugin.command('books')
-@plugin.example(f'.books')
-def books_list(bot, trigger):
-    """List all available Books APIs."""
-    bot.say(f'Available Books APIs (16):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .books_info <name> for details')
-
-
-@plugin.command('books_info')
-@plugin.example(f'.books_info <name>')
-def books_info(bot, trigger):
-    """Get information about a specific Books API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .books_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('books_search')
-@plugin.example(f'.books_search <query>')
-def books_search(bot, trigger):
-    """Search Books APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .books_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 @plugin.command('book_gutendex')
@@ -196,10 +144,10 @@ def book_gutendex(bot, trigger):
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .book_gutendex <title> or .book_gutendex <book_id>')
         return
-    
+
     query = trigger.group(2).strip()
     logger.info(f'Book search: {query}')
-    
+
     # Check if it's a numeric ID
     if query.isdigit():
         get_book_by_id(bot, trigger.nick, int(query))
@@ -211,63 +159,64 @@ def search_books(bot, nick: str, query: str):
     """Search for books by title."""
     encoded_query = http.quote(query)
     url = f'https://gutendex.com/books/?search={encoded_query}&limit=3'
-    
+
     logger.debug(f'Searching books: {url}')
     data = http.get(url)
-    
+
     if not data or 'results' not in data:
         bot.notice(nick, 'No books found or API error. Please try again.')
         return
-    
+
     results = data.get('results', [])[:3]
-    
+
     if not results:
         bot.notice(nick, f'No books found for "{query}"')
         return
-    
+
     bot.say(f'Found {len(results)} book(s) for "{query}":')
     for book in results:
         title = book.get('title', 'Unknown')
         authors = ', '.join([a.get('name', '') for a in book.get('authors', [])])
         book_id = book.get('id', '')
-        
+
         response = f"{formatter.bold(title)}"
         if authors:
             response += f" by {formatter.italic(authors)}"
         if book_id:
             response += f" | ID: {formatter.monospace(str(book_id))}"
-        
+
         bot.say(formatter.truncate(response, max_len=400))
 
 
 def get_book_by_id(bot, nick: str, book_id: int):
     """Get book details by Gutenberg ID."""
     url = f'https://gutendex.com/books/{book_id}/'
-    
+
     logger.debug(f'Fetching book by ID: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(nick, f'Book with ID {book_id} not found.')
         return
-    
+
     title = data.get('title', 'Unknown')
     authors = ', '.join([a.get('name', '') for a in data.get('authors', [])])
     languages = ', '.join(data.get('languages', []))
     download_count = data.get('download_count', 0)
-    
+
     response = f"{formatter.bold(title)}"
     if authors:
         response += f" by {formatter.italic(authors)}"
     if languages:
         response += f" | Language: {formatter.monospace(languages)}"
     response += f" | Downloads: {formatter.bold(f'{download_count:,}')}"
-    
+
     bot.say(formatter.truncate(response, max_len=400))
 
 
 def setup(bot):
     """Module setup - Books APIs loaded."""
+    register_apis('books', APIS)
     bot.memory['books_loaded'] = True
     bot.memory['books_count'] = 16
     logger.info('Books module loaded')
@@ -285,33 +234,33 @@ def book_openlibrary(bot, trigger):
     """Search for books using Open Library API."""
     # Open Library: https://openlibrary.org/developers/api
     # Endpoint: GET https://openlibrary.org/search.json?q={query}&limit=3
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .book_openlibrary <search_query>')
         bot.notice(trigger.nick, 'Example: .book_openlibrary python programming')
         return
-    
+
     query = trigger.group(2).strip()
-    
+
     logger.info(f'Open Library search: {query}')
-    
+
     encoded_query = http.quote(query)
     url = f'https://openlibrary.org/search.json?q={encoded_query}&limit=3'
-    
+
     logger.debug(f'Searching Open Library: {url}')
     data = http.get(url)
-    
+
     if not data or 'docs' not in data:
         bot.notice(trigger.nick, 'Failed to search Open Library.')
         return
-    
+
     docs = data.get('docs', [])
     num_found = data.get('numFound', 0)
-    
+
     if not docs:
         bot.notice(trigger.nick, f'No books found for "{query}"')
         return
-    
+
     bot.say(f'Found {num_found:,} book(s) for "{query}" (showing {len(docs)}):')
     for book in docs:
         title = book.get('title', 'Unknown')
@@ -320,12 +269,12 @@ def book_openlibrary(bot, trigger):
         if len(authors) > 2:
             author_str += f' +{len(authors)-2}'
         year = book.get('first_publish_year', '')
-        
+
         response = f"{formatter.bold(title)}"
         response += f" by {formatter.italic(author_str)}"
         if year:
             response += f" | {formatter.monospace(str(year))}"
-        
+
         bot.say(formatter.truncate(response, max_len=400))
 
 
@@ -342,7 +291,7 @@ def verse_bibleapi(bot, trigger):
     #   GET https://bible-api.com/data/web/random - random verse
     #   GET https://bible-api.com/data/web/random/{BOOK_ID} - random from book
     #   GET https://bible-api.com/data/web - list all books
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .verse_bibleapi <book> <chapter>:<verse> | random [book_id] | books')
         bot.notice(trigger.nick, 'Examples: .verse_bibleapi john 3:16')
@@ -350,110 +299,110 @@ def verse_bibleapi(bot, trigger):
         bot.notice(trigger.nick, '          .verse_bibleapi random JHN')
         bot.notice(trigger.nick, '          .verse_bibleapi books')
         return
-    
+
     query = trigger.group(2).strip().lower()
-    
+
     # Handle random verse
     if query.startswith('random'):
         parts = query.split()
         book_id = parts[1].upper() if len(parts) > 1 else None
-        
+
         logger.info(f'Bible API random verse: {book_id or "all"}')
-        
+
         if book_id:
             url = f'https://bible-api.com/data/web/random/{http.quote(book_id)}'
         else:
             url = 'https://bible-api.com/data/web/random'
-        
+
         logger.debug(f'Fetching random verse: {url}')
         data = http.get(url)
-        
+
         if not data or 'random_verse' not in data:
             bot.notice(trigger.nick, 'Failed to fetch random verse.')
             return
-        
+
         verse_data = data.get('random_verse', {})
         translation = data.get('translation', {})
         translation_name = translation.get('name', 'WEB')
-        
+
         book = verse_data.get('book', 'Unknown')
         chapter = verse_data.get('chapter', '')
         verse = verse_data.get('verse', '')
         text = verse_data.get('text', '').strip()
-        
+
         reference = f"{book} {chapter}:{verse}"
-        
+
         # Format verse (limit length)
         text_short = text[:300] if len(text) > 300 else text
         if len(text) > 300:
             text_short += '...'
-        
+
         response = f"{formatter.bold('Random Verse')}: {formatter.bold(reference)} ({formatter.monospace(translation_name)}):"
         bot.say(response)
         bot.say(f"{formatter.italic(text_short)}")
         return
-    
+
     # Handle book listing
-    if query == 'books' or query == 'list':
+    if query in ('books', 'list'):
         logger.info('Bible API list books')
-        
+
         url = 'https://bible-api.com/data/web'
-        
+
         logger.debug(f'Fetching books list: {url}')
         data = http.get(url)
-        
+
         if not data or 'books' not in data:
             bot.notice(trigger.nick, 'Failed to fetch books list.')
             return
-        
+
         translation = data.get('translation', {})
         translation_name = translation.get('name', 'WEB')
         books = data.get('books', [])
-        
+
         if not books:
             bot.notice(trigger.nick, 'No books found.')
             return
-        
+
         bot.say(f'{formatter.bold("Bible Books")} ({formatter.monospace(translation_name)}): {len(books)} books')
-        
+
         # Show first 15 books
         book_list = ', '.join([f"{book.get('name', 'Unknown')} ({formatter.monospace(book.get('id', ''))})" for book in books[:15]])
         bot.say(book_list)
-        
+
         if len(books) > 15:
             bot.say(f'... and {len(books) - 15} more books. Use .verse_bibleapi <book_id> <chapter>:<verse> for verses')
         return
-    
+
     # Handle specific verse lookup
     reference = trigger.group(2).strip()
-    
+
     logger.info(f'Bible API lookup: {reference}')
-    
+
     # Clean up the reference (remove spaces, make lowercase)
     ref_clean = reference.replace(' ', '+').lower()
     url = f'https://bible-api.com/{ref_clean}'
-    
+
     logger.debug(f'Fetching verse: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, f'Failed to fetch verse: {reference}')
         return
-    
+
     text = data.get('text', '').strip()
     reference_full = data.get('reference', reference)
     translation = data.get('translation', 'KJV')
     translation_name = data.get('translation_name', translation)
-    
+
     if not text:
         bot.notice(trigger.nick, f'Verse not found: {reference}')
         return
-    
+
     # Format verse (limit length)
     text_short = text[:300] if len(text) > 300 else text
     if len(text) > 300:
         text_short += '...'
-    
+
     response = f"{formatter.bold(reference_full)} ({formatter.monospace(translation_name)}):"
     bot.say(response)
     bot.say(f"{formatter.italic(text_short)}")
@@ -467,23 +416,23 @@ def poem_poetrydb(bot, trigger):
     # PoetryDB: https://github.com/thundercomb/poetrydb#readme
     # Endpoint: GET https://poetrydb.org/{endpoint}
     # Examples: /author/{author}, /title/{title}, /author,title/{author};{title}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .poem_poetrydb <query>')
         bot.notice(trigger.nick, 'Examples: .poem_poetrydb author=emily+dickinson')
         bot.notice(trigger.nick, '          .poem_poetrydb title=hope')
         return
-    
+
     query = trigger.group(2).strip()
-    
+
     logger.info(f'PoetryDB search: {query}')
-    
+
     # Parse query format: author=name or title=name
     if '=' in query:
         param, value = query.split('=', 1)
         param = param.strip().lower()
         value = value.strip()
-        
+
         if param == 'author':
             endpoint = f'author/{http.quote(value)}'
         elif param == 'title':
@@ -494,32 +443,32 @@ def poem_poetrydb(bot, trigger):
     else:
         # Default to title search
         endpoint = f'title/{http.quote(query)}'
-    
+
     url = f'https://poetrydb.org/{endpoint}'
-    
+
     logger.debug(f'Searching PoetryDB: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to search PoetryDB.')
         return
-    
+
     # Response can be a list or object
     poems = data if isinstance(data, list) else [data] if data else []
-    
+
     if not poems:
         bot.notice(trigger.nick, f'No poems found for "{query}"')
         return
-    
+
     # Show first poem
     poem = poems[0]
     title = poem.get('title', 'Unknown')
     author = poem.get('author', 'Unknown')
     lines = poem.get('lines', [])
-    
+
     response = f"{formatter.bold(title)} by {formatter.italic(author)}"
     bot.say(response)
-    
+
     if lines:
         # Show first few lines
         poem_text = ' '.join(lines[:3])
@@ -535,33 +484,33 @@ def book_stephenking(bot, trigger):
     """Get Stephen King book information."""
     # Stephen King API: https://stephen-king-api.onrender.com/
     # Endpoint: GET https://stephen-king-api.onrender.com/api/books
-    
+
     logger.info('Stephen King book lookup')
-    
+
     # For now, get list of books
     url = 'https://stephen-king-api.onrender.com/api/books'
-    
+
     logger.debug(f'Fetching Stephen King books: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch Stephen King books.')
         return
-    
+
     # Response can be a list or object
     books = data if isinstance(data, list) else data.get('data', []) if isinstance(data, dict) else []
-    
+
     if not books:
         bot.notice(trigger.nick, 'No books found.')
         return
-    
+
     # Show first 3 books
     bot.say(f'{formatter.bold("Stephen King Books")} (showing {min(3, len(books))}):')
     for book in books[:3]:
         title = book.get('title', book.get('Title', 'Unknown'))
         year = book.get('year', book.get('Year', ''))
         pages = book.get('pages', book.get('Pages', ''))
-        
+
         response = f"{formatter.bold(title)}"
         if year:
             response += f" ({formatter.monospace(str(year))})"

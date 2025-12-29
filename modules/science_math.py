@@ -3,18 +3,18 @@ Sopel module for Science & Math APIs.
 Supports 25 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter, XMLParser
+from common import HTTPClient, IRCFormatter, XMLParser, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
 formatter = IRCFormatter()
-
 
 # API definitions
 APIS = [
@@ -196,61 +196,6 @@ APIS = [
 ]
 
 
-@plugin.command('science_math')
-@plugin.command('sciencemath')
-@plugin.example(f'.science_math')
-def science_math_list(bot, trigger):
-    """List all available Science & Math APIs."""
-    bot.say(f'Available Science & Math APIs (25):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .science_math_info <name> for details')
-
-
-@plugin.command('science_math_info')
-@plugin.example(f'.science_math_info <name>')
-def science_math_info(bot, trigger):
-    """Get information about a specific Science & Math API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .science_math_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('science_math_search')
-@plugin.example(f'.science_math_search <query>')
-def science_math_search(bot, trigger):
-    """Search Science & Math APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .science_math_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
-
-
 @plugin.command('arxiv')
 @plugin.example('.arxiv quantum')
 @plugin.example('.arxiv machine learning')
@@ -259,60 +204,60 @@ def arxiv_search(bot, trigger):
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .arxiv <search_query>')
         return
-    
+
     query = trigger.group(2).strip()
     logger.info(f'ArXiv search: {query}')
-    
+
     # arXiv API search - returns XML, not JSON
     encoded_query = http.quote(query)
     url = f'https://export.arxiv.org/api/query?search_query=all:{encoded_query}&start=0&max_results=3'
-    
+
     logger.debug(f'Searching arXiv: {url}')
-    
+
     try:
         # Use HTTPClient's get_text for XML response
         xml_data = http.get_text(url)
-        
+
         if not xml_data:
             bot.notice(trigger.nick, f'No papers found for "{query}" or API error.')
             return
-        
+
         # Parse XML using ElementTree
         root = XMLParser.parse_etree(xml_data)
-        
+
         if root is None:
-            bot.notice(trigger.nick, f'Failed to parse XML response.')
+            bot.notice(trigger.nick, 'Failed to parse XML response.')
             return
-        
+
         # Find all entry elements (arXiv returns Atom feed format)
         entries = root.findall('.//{http://www.w3.org/2005/Atom}entry')
-        
+
         if not entries:
             bot.notice(trigger.nick, f'No papers found for "{query}"')
             return
-        
+
         bot.say(f'Found {len(entries)} paper(s) for "{query}":')
         for i, entry in enumerate(entries[:3], 1):
             # Extract title
             title_elem = entry.find('{http://www.w3.org/2005/Atom}title')
             title = title_elem.text.strip() if title_elem is not None and title_elem.text else 'Unknown'
-            
+
             # Extract published date
             published_elem = entry.find('{http://www.w3.org/2005/Atom}published')
             published = published_elem.text[:10] if published_elem is not None and published_elem.text else 'Unknown'
-            
+
             # Extract summary
             summary_elem = entry.find('{http://www.w3.org/2005/Atom}summary')
             summary = summary_elem.text.strip() if summary_elem is not None and summary_elem.text else ''
             summary_short = summary.replace('\n', ' ')[:100] if summary else ''
-            
+
             # Extract authors
             authors = []
             for author in entry.findall('{http://www.w3.org/2005/Atom}author'):
                 name_elem = author.find('{http://www.w3.org/2005/Atom}name')
                 if name_elem is not None and name_elem.text:
                     authors.append(name_elem.text.strip())
-            
+
             response = f"{i}. {formatter.bold(title)} | Published: {formatter.monospace(published)}"
             if authors:
                 authors_str = ', '.join(authors[:2])
@@ -322,18 +267,17 @@ def arxiv_search(bot, trigger):
             bot.say(formatter.truncate(response, max_len=400))
             if summary_short:
                 bot.say(f"   {formatter.italic(summary_short)}...")
-                
+
     except Exception as e:
         logger.exception('Error searching arXiv', e)
         bot.notice(trigger.nick, 'Failed to search arXiv. Please try again.')
 
-
 def setup(bot):
     """Module setup - Science & Math APIs loaded."""
+    register_apis('science_math', APIS)
     bot.memory['science_math_loaded'] = True
     bot.memory['science_math_count'] = 25
     logger.info('Science & Math module loaded')
-
 
 def shutdown(bot):
     """Module shutdown."""

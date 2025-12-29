@@ -3,13 +3,14 @@ Sopel module for Health APIs.
 Supports 20 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -161,59 +162,9 @@ APIS = [
 ]
 
 
-@plugin.command('health')
-@plugin.command('health')
-@plugin.example(f'.health')
-def health_list(bot, trigger):
-    """List all available Health APIs."""
-    bot.say(f'Available Health APIs (20):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .health_info <name> for details')
 
 
-@plugin.command('health_info')
-@plugin.example(f'.health_info <name>')
-def health_info(bot, trigger):
-    """Get information about a specific Health API."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .health_info <api_name>')
-        return
 
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.notice(trigger.nick, f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('health_search')
-@plugin.example(f'.health_search <query>')
-def health_search(bot, trigger):
-    """Search Health APIs by name or description."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .health_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.notice(trigger.nick, f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 @plugin.command('covid_opendisease')
@@ -222,22 +173,22 @@ def health_search(bot, trigger):
 def covid_opendisease(bot, trigger):
     """Get COVID-19 data using Open Disease API."""
     country = trigger.group(2).strip() if trigger.group(2) else 'all'
-    
+
     logger.info(f'COVID-19 data lookup: {country}')
-    
+
     if country.lower() == 'all':
         url = 'https://disease.sh/v3/covid-19/all'
     else:
         encoded_country = http.quote(country)
         url = f'https://disease.sh/v3/covid-19/countries/{encoded_country}'
-    
+
     logger.debug(f'Fetching COVID-19 data: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, f'Failed to fetch COVID-19 data for "{country}" or API error.')
         return
-    
+
     country_name = data.get('country', 'World')
     cases = data.get('cases', 0)
     deaths = data.get('deaths', 0)
@@ -245,19 +196,20 @@ def covid_opendisease(bot, trigger):
     active = data.get('active', 0)
     today_cases = data.get('todayCases', 0)
     today_deaths = data.get('todayDeaths', 0)
-    
+
     response = f"{formatter.bold(country_name)} COVID-19:"
     response += f" Cases: {formatter.bold(f'{cases:,}')} | Deaths: {formatter.bold(f'{deaths:,}')} | Recovered: {formatter.bold(f'{recovered:,}')}"
     if active:
         response += f" | Active: {formatter.monospace(f'{active:,}')}"
     if today_cases or today_deaths:
         response += f" | Today: {formatter.italic(f'+{today_cases:,} cases, +{today_deaths:,} deaths')}"
-    
+
     bot.say(formatter.truncate(response, max_len=400))
 
 
 def setup(bot):
     """Module setup - Health APIs loaded."""
+    register_apis('health', APIS)
     bot.memory['health_loaded'] = True
     bot.memory['health_count'] = 20
     logger.info('Health module loaded')

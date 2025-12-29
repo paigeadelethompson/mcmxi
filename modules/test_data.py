@@ -3,18 +3,18 @@ Sopel module for Test Data APIs.
 Supports 19 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
 formatter = IRCFormatter()
-
 
 # API definitions
 APIS = [
@@ -153,72 +153,15 @@ APIS = [
     },
 ]
 
-
-@plugin.command('test_data')
-@plugin.command('testdata')
-@plugin.example(f'.test_data')
-def test_data_list(bot, trigger):
-    """List all available Test Data APIs."""
-    bot.say(f'Available Test Data APIs (19):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .test_data_info <name> for details')
-
-
-@plugin.command('test_data_info')
-@plugin.example(f'.test_data_info <name>')
-def test_data_info(bot, trigger):
-    """Get information about a specific Test Data API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .test_data_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('test_data_search')
-@plugin.example(f'.test_data_search <query>')
-def test_data_search(bot, trigger):
-    """Search Test Data APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .test_data_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
-
-
 def setup(bot):
     """Module setup - Test Data APIs loaded."""
+    register_apis('test_data', APIS)
     bot.memory['test_data_loaded'] = True
     bot.memory['test_data_count'] = 19
-
 
 def shutdown(bot):
     """Module shutdown."""
     bot.memory['test_data_loaded'] = False
-
 
 @plugin.command('lorem_baconipsum')
 @plugin.example('.lorem_baconipsum')
@@ -227,7 +170,7 @@ def lorem_baconipsum(bot, trigger):
     """Generate bacon ipsum lorem text using Bacon Ipsum API."""
     # Bacon Ipsum: https://baconipsum.com/json-api/
     # Endpoint: GET https://baconipsum.com/api/?type=all-meat&paras=3&start-with-lorem=1&format=json
-    
+
     paras = 2  # default
     if trigger.group(2):
         try:
@@ -238,23 +181,22 @@ def lorem_baconipsum(bot, trigger):
         except ValueError:
             bot.notice(trigger.nick, 'Invalid number. Please provide a number between 1-5.')
             return
-    
+
     logger.info(f'Bacon Ipsum generation: {paras} paragraphs')
-    
+
     url = f'https://baconipsum.com/api/?type=all-meat&paras={paras}&start-with-lorem=1&format=json'
-    
+
     logger.debug(f'Generating bacon ipsum: {url}')
     data = http.get(url)
-    
+
     if not data or not isinstance(data, list):
         bot.notice(trigger.nick, 'Failed to generate bacon ipsum text.')
         return
-    
+
     bot.say(f'{formatter.bold("Bacon Ipsum")} ({paras} paragraph(s)):')
     for i, para in enumerate(data[:3], 1):
         para_text = para[:200] if isinstance(para, str) else str(para)[:200]
         bot.say(f"{i}. {formatter.italic(para_text)}...")
-
 
 @plugin.command('avatar_dicebear')
 @plugin.example('.avatar_dicebear')
@@ -263,20 +205,20 @@ def avatar_dicebear(bot, trigger):
     """Generate random pixel-art avatar URL using Dicebear Avatars."""
     # Dicebear Avatars: https://avatars.dicebear.com/
     # Endpoint: GET https://api.dicebear.com/7.x/{style}/svg?seed={seed}
-    
+
     style = trigger.group(2).strip() if trigger.group(2) else 'avataaars'
-    
+
     # Validate style (common ones: avataaars, bottts, identicon, initials, pixel-art)
     valid_styles = ['avataaars', 'bottts', 'identicon', 'initials', 'pixel-art', 'personas', 'micah']
     if style not in valid_styles:
         style = 'avataaars'
-    
+
     logger.info(f'Dicebear avatar: {style}')
-    
+
     # Generate random seed
     import random
     seed = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=10))
-    
+
     url = f'https://api.dicebear.com/7.x/{http.quote(style)}/svg?seed={seed}'
-    
+
     bot.say(f"{formatter.bold('Dicebear Avatar')} ({formatter.monospace(style)}): {formatter.monospace(url)}")

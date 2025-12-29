@@ -3,13 +3,14 @@ Sopel module for Entertainment APIs.
 Supports 12 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -105,59 +106,9 @@ APIS = [
 ]
 
 
-@plugin.command('entertainment')
-@plugin.command('entertainment')
-@plugin.example(f'.entertainment')
-def entertainment_list(bot, trigger):
-    """List all available Entertainment APIs."""
-    bot.say(f'Available Entertainment APIs (12):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .entertainment_info <name> for details')
 
 
-@plugin.command('entertainment_info')
-@plugin.example(f'.entertainment_info <name>')
-def entertainment_info(bot, trigger):
-    """Get information about a specific Entertainment API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .entertainment_info <api_name>')
-        return
 
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('entertainment_search')
-@plugin.example(f'.entertainment_search <query>')
-def entertainment_search(bot, trigger):
-    """Search Entertainment APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .entertainment_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 @plugin.command('joke_jokeapi')
@@ -166,28 +117,28 @@ def entertainment_search(bot, trigger):
 def joke_jokeapi(bot, trigger):
     """Get a random joke using JokeAPI."""
     category = trigger.group(2).strip().lower() if trigger.group(2) else 'any'
-    
+
     logger.info(f'Fetching joke (category: {category})')
-    
+
     # JokeAPI supports categories: any, programming, misc, dark, pun, spooky, christmas
     valid_categories = ['any', 'programming', 'misc', 'dark', 'pun', 'spooky', 'christmas']
     if category not in valid_categories:
         category = 'any'
-    
+
     # Don't restrict type - allow both single and twopart jokes
     url = f'https://v2.jokeapi.dev/joke/{category}'
-    
+
     logger.debug(f'Fetching joke: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch joke. Please try again.')
         return
-    
+
     if data.get('error'):
         bot.notice(trigger.nick, f"Error: {data.get('message', 'Unknown error')}")
         return
-    
+
     # JokeAPI can return single jokes or two-part jokes
     joke_text = ''
     joke_type = data.get('type', '')
@@ -198,9 +149,9 @@ def joke_jokeapi(bot, trigger):
         delivery = data.get('delivery', '')
         if setup and delivery:
             joke_text = f"{formatter.italic(setup)} → {formatter.bold(delivery)}"
-    
+
     category_used = data.get('category', 'any').upper()
-    
+
     if joke_text:
         response = f"{formatter.bold(f'[{category_used}]')} {joke_text}"
         bot.say(formatter.truncate(response, max_len=400))
@@ -210,6 +161,7 @@ def joke_jokeapi(bot, trigger):
 
 def setup(bot):
     """Module setup - Entertainment APIs loaded."""
+    register_apis('entertainment', APIS)
     bot.memory['entertainment_loaded'] = True
     bot.memory['entertainment_count'] = 12
     logger.info('Entertainment module loaded')

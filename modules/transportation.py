@@ -3,13 +3,14 @@ Sopel module for Transportation APIs.
 Supports 30 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -231,63 +232,14 @@ APIS = [
 ]
 
 
-@plugin.command('transportation')
-@plugin.command('transportation')
-@plugin.example(f'.transportation')
-def transportation_list(bot, trigger):
-    """List all available Transportation APIs."""
-    bot.say(f'Available Transportation APIs (30):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .transportation_info <name> for details')
 
 
-@plugin.command('transportation_info')
-@plugin.example(f'.transportation_info <name>')
-def transportation_info(bot, trigger):
-    """Get information about a specific Transportation API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .transportation_info <api_name>')
-        return
 
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('transportation_search')
-@plugin.example(f'.transportation_search <query>')
-def transportation_search(bot, trigger):
-    """Search Transportation APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .transportation_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 def setup(bot):
     """Module setup - Transportation APIs loaded."""
+    register_apis('transportation', APIS)
     bot.memory['transportation_loaded'] = True
     bot.memory['transportation_count'] = 30
 
@@ -303,36 +255,36 @@ def airport_airportsapi(bot, trigger):
     """Get airport information by ICAO code using airportsapi."""
     # airportsapi: https://airport-web.appspot.com/api/docs/
     # Endpoint: GET https://airport-web.appspot.com/api/airport/{icao}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .airport_airportsapi <ICAO_code>')
         bot.notice(trigger.nick, 'Example: .airport_airportsapi KJFK')
         return
-    
+
     icao = trigger.group(2).strip().upper()
-    
+
     # Validate ICAO code (4 characters, alphanumeric)
     if not icao.isalnum() or len(icao) != 4:
         bot.notice(trigger.nick, 'ICAO code must be 4 alphanumeric characters.')
         return
-    
+
     logger.info(f'Airport lookup: {icao}')
-    
+
     url = f'https://airport-web.appspot.com/api/airport/{http.quote(icao)}'
-    
+
     logger.debug(f'Looking up airport: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, f'Airport "{icao}" not found or API error.')
         return
-    
+
     icao_code = data.get('icao', icao)
     name = data.get('name', 'Unknown')
     city = data.get('city', 'Unknown')
     country = data.get('country', 'Unknown')
     website = data.get('website', '')
-    
+
     response = f"{formatter.bold(name)} {formatter.monospace(f'({icao_code})')}"
     if city and city != 'Unknown':
         response += f" | {formatter.italic(city)}"
@@ -340,5 +292,5 @@ def airport_airportsapi(bot, trigger):
         response += f", {formatter.italic(country)}"
     if website:
         response += f" | {formatter.monospace(website)}"
-    
+
     bot.say(formatter.truncate(response, max_len=400))

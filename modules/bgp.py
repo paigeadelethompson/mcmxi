@@ -1,726 +1,424 @@
 """
-Sopel module for BGP APIs.
-Supports BGPView API for IP, ASN, and prefix lookups.
+Sopel module for BGP/RIPE database queries.
+Downloads and queries RIPE database from https://ftp.ripe.net/ripe/dbase/
 """
+import gzip
+import ipaddress
+import os
+import re
+import sys
+import threading
+from typing import Dict, List, Optional
 
 from sopel import plugin
-import json
-import sys
-import os
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger
 
 logger = get_module_logger(__name__)
-http = HTTPClient(max_size=5 * 1024 * 1024)
+http = HTTPClient(max_size=500 * 1024 * 1024)  # 500MB max for database
 formatter = IRCFormatter()
 
+# Database file path
+DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+DB_FILE = os.path.join(DB_DIR, 'ripe.db.gz')
+DB_URL = 'https://ftp.ripe.net/ripe/dbase/ripe.db.gz'
 
-# API definitions
-APIS = [
-    {
-        'name': 'BGPView',
-        'description': 'IP, ASN, and prefix lookups for BGP routing information',
-        'link': 'https://bgpview.docs.apiary.io',
-        'https': True,
-        'cors': 'unknown',
-    },
-]
+# Thread lock for database operations
+db_lock = threading.Lock()
+db_loaded = False
 
 
-@plugin.command('bgp')
-@plugin.command('bgpview')
-@plugin.example(f'.bgp')
-def bgp_list(bot, trigger):
-    """List all available BGP APIs."""
-    bot.say(f'Available BGP APIs (1):')
-    for i, api in enumerate(APIS[:10], 1):
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
+def ensure_db_dir():
+    """Ensure database directory exists."""
+    os.makedirs(DB_DIR, exist_ok=True)
 
 
-@plugin.command('bgp_info')
-@plugin.example(f'.bgp_info <name>')
-def bgp_info(bot, trigger):
-    """Get information about a specific BGP API."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .bgp_info <api_name>')
-        return
+def download_database(force: bool = False) -> bool:
+    """Download RIPE database if it doesn't exist or force is True."""
+    ensure_db_dir()
+    
+    if os.path.exists(DB_FILE) and not force:
+        logger.info(f'RIPE database already exists: {DB_FILE}')
+        return True
+    
+    logger.info(f'Downloading RIPE database from {DB_URL}')
+    try:
+        response = http.get(DB_URL)
+        if not response or 'text' not in response:
+            # Try to get as binary
+            import urllib.request
+            with urllib.request.urlopen(DB_URL) as f:
+                data = f.read()
+                with open(DB_FILE, 'wb') as out:
+                    out.write(data)
+        else:
+            # If we got text, write it directly
+            with open(DB_FILE, 'wb') as f:
+                f.write(response['text'].encode('utf-8'))
+        
+        logger.info(f'RIPE database downloaded: {DB_FILE}')
+        return True
+    except Exception as e:
+        logger.error(f'Failed to download RIPE database: {e}')
+        return False
 
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
 
-    bot.notice(trigger.nick, f'API not found: {trigger.group(2)}')
+def parse_ripe_object(lines: List[str]) -> Dict[str, str]:
+    """Parse a RIPE database object from lines."""
+    obj = {}
+    current_key = None
+    current_value = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        
+        if ':' in line:
+            # Save previous key-value
+            if current_key:
+                obj[current_key] = '\n'.join(current_value).strip()
+            
+            # New key-value pair
+            key, value = line.split(':', 1)
+            key = key.strip()
+            value = value.strip()
+            
+            if key in obj:
+                # Multi-value field - convert to list
+                if not isinstance(obj[key], list):
+                    obj[key] = [obj[key]]
+                obj[key].append(value)
+                current_key = None
+            else:
+                current_key = key
+                current_value = [value]
+        elif current_key and line.startswith(' '):
+            # Continuation line
+            current_value.append(line.strip())
+    
+    # Save last key-value
+    if current_key:
+        obj[current_key] = '\n'.join(current_value).strip()
+    
+    return obj
 
 
-@plugin.command('bgp_search')
-@plugin.example(f'.bgp_search <query>')
-def bgp_search(bot, trigger):
-    """Search BGP APIs by name or description."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .bgp_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
+def search_database(query_type: str, query_value: str, limit: int = 5) -> List[Dict[str, str]]:
+    """Search RIPE database for objects matching query."""
+    if not os.path.exists(DB_FILE):
+        logger.warning('RIPE database not found, cannot search')
+        return []
+    
     results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.notice(trigger.nick, f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
-
-
-@plugin.command('bgp_ip')
-@plugin.example('.bgp_ip 8.8.8.8')
-@plugin.example('.bgp_ip 2001:4860:4860::8888')
-def bgp_ip(bot, trigger):
-    """Get BGP information for an IP address using BGPView API."""
-    # BGPView: https://bgpview.docs.apiary.io
-    # Endpoint: GET https://api.bgpview.io/ip/{ip_address}
+    current_object = []
+    in_object = False
     
+    try:
+        with gzip.open(DB_FILE, 'rt', encoding='latin-1', errors='ignore') as f:
+            for line in f:
+                line = line.rstrip('\n\r')
+                
+                if line.startswith('inetnum:') or line.startswith('inet6num:') or \
+                   line.startswith('aut-num:') or line.startswith('organisation:') or \
+                   line.startswith('person:') or line.startswith('role:'):
+                    # Save previous object if it matches
+                    if in_object and current_object:
+                        obj = parse_ripe_object(current_object)
+                        if matches_query(obj, query_type, query_value):
+                            results.append(obj)
+                            if len(results) >= limit:
+                                break
+                    
+                    # Start new object
+                    current_object = [line]
+                    in_object = True
+                elif line == '' and in_object:
+                    # End of object
+                    if current_object:
+                        obj = parse_ripe_object(current_object)
+                        if matches_query(obj, query_type, query_value):
+                            results.append(obj)
+                            if len(results) >= limit:
+                                break
+                    current_object = []
+                    in_object = False
+                elif in_object:
+                    current_object.append(line)
+            
+            # Check last object
+            if in_object and current_object:
+                obj = parse_ripe_object(current_object)
+                if matches_query(obj, query_type, query_value):
+                    results.append(obj)
+    
+    except Exception as e:
+        logger.error(f'Error reading RIPE database: {e}')
+    
+    return results
+
+
+def matches_query(obj: Dict[str, str], query_type: str, query_value: str) -> bool:
+    """Check if object matches query."""
+    query_value_lower = query_value.lower()
+    
+    if query_type == 'asn':
+        # Search aut-num objects
+        if 'aut-num' not in obj:
+            return False
+        asn = obj.get('aut-num', '').upper()
+        query_asn = query_value.upper().replace('AS', '')
+        return query_asn in asn
+    
+    elif query_type == 'ip':
+        # Search inetnum/inet6num objects
+        if 'inetnum' not in obj and 'inet6num' not in obj:
+            return False
+        try:
+            ip = ipaddress.ip_address(query_value)
+            inetnum = obj.get('inetnum', obj.get('inet6num', ''))
+            if '-' in inetnum:
+                start, end = inetnum.split('-', 1)
+                start_ip = ipaddress.ip_address(start.strip())
+                end_ip = ipaddress.ip_address(end.strip())
+                return start_ip <= ip <= end_ip
+            elif '/' in inetnum:
+                network = ipaddress.ip_network(inetnum, strict=False)
+                return ip in network
+        except (ValueError, AttributeError):
+            return False
+    
+    elif query_type == 'org':
+        # Search organisation objects
+        if 'organisation' not in obj:
+            return False
+        org_id = obj.get('organisation', '').lower()
+        org_name = obj.get('org-name', '').lower()
+        return query_value_lower in org_id or query_value_lower in org_name
+    
+    elif query_type == 'text':
+        # Search all text fields
+        for value in obj.values():
+            if isinstance(value, list):
+                value = ' '.join(value)
+            if query_value_lower in str(value).lower():
+                return True
+    
+    return False
+
+
+def format_autnum(obj: Dict[str, str]) -> str:
+    """Format aut-num object for display."""
+    asn = obj.get('aut-num', 'Unknown')
+    as_name = obj.get('as-name', '')
+    descr = obj.get('descr', '')
+    org = obj.get('org', '')
+    
+    result = f"{formatter.bold(asn)}"
+    if as_name:
+        result += f": {formatter.italic(as_name)}"
+    if descr:
+        result += f" | {descr}"
+    if org:
+        result += f" | Org: {formatter.monospace(org)}"
+    return result
+
+
+def format_inetnum(obj: Dict[str, str]) -> str:
+    """Format inetnum/inet6num object for display."""
+    inetnum = obj.get('inetnum') or obj.get('inet6num', 'Unknown')
+    netname = obj.get('netname', '')
+    descr = obj.get('descr', '')
+    country = obj.get('country', '')
+    org = obj.get('org', '')
+    
+    result = f"{formatter.bold(inetnum)}"
+    if netname:
+        result += f" | {formatter.italic(netname)}"
+    if descr:
+        result += f" | {descr}"
+    if country:
+        result += f" | {formatter.monospace(country)}"
+    if org:
+        result += f" | Org: {formatter.monospace(org)}"
+    return result
+
+
+def format_organisation(obj: Dict[str, str]) -> str:
+    """Format organisation object for display."""
+    org_id = obj.get('organisation', 'Unknown')
+    org_name = obj.get('org-name', '')
+    country = obj.get('country', '')
+    descr = obj.get('descr', '')
+    
+    result = f"{formatter.bold(org_id)}"
+    if org_name:
+        result += f": {formatter.italic(org_name)}"
+    if descr:
+        result += f" | {descr}"
+    if country:
+        result += f" | {formatter.monospace(country)}"
+    return result
+
+
+@plugin.command('ripe_update')
+@plugin.example('.ripe_update')
+def ripe_update(bot, trigger):
+    """Update RIPE database (fantasy command)."""
+    bot.say('Downloading RIPE database...')
+    if download_database(force=True):
+        bot.say('RIPE database updated successfully.')
+    else:
+        bot.say('Failed to update RIPE database.')
+
+
+@plugin.command('ripe_asn')
+@plugin.example('.ripe_asn AS15169')
+@plugin.example('.ripe_asn 15169')
+def ripe_asn(bot, trigger):
+    """Query RIPE database for ASN information."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bgp_ip <ip_address>')
-        bot.notice(trigger.nick, 'Examples: .bgp_ip 8.8.8.8')
-        bot.notice(trigger.nick, '          .bgp_ip 2001:4860:4860::8888')
+        bot.notice(trigger.nick, 'Usage: .ripe_asn <ASN>')
+        bot.notice(trigger.nick, 'Example: .ripe_asn AS15169')
         return
     
-    ip_address = trigger.group(2).strip()
-    
-    logger.info(f'BGPView IP lookup: {ip_address}')
-    
-    encoded_ip = http.quote(ip_address)
-    url = f'https://api.bgpview.io/ip/{encoded_ip}'
-    
-    logger.debug(f'Querying BGPView IP: {url}')
-    data = http.get(url)
-    
-    if not data or 'status' not in data:
-        bot.notice(trigger.nick, 'Failed to query BGPView API.')
-        return
-    
-    if data.get('status') != 'ok':
-        error_msg = data.get('status_message', 'Unknown error')
-        bot.notice(trigger.nick, f'BGPView API error: {error_msg}')
-        return
-    
-    data_payload = data.get('data', {})
-    
-    # IP information
-    ip_addr = data_payload.get('ip', ip_address)
-    ptr_record = data_payload.get('ptr_record', '')
-    rir_allocation = data_payload.get('rir_allocation', {})
-    rir_name = rir_allocation.get('rir_name', 'Unknown')
-    
-    # Prefixes (IPv4 and IPv6)
-    prefixes = data_payload.get('prefixes', {})
-    ipv4_prefixes = prefixes.get('ipv4', [])
-    ipv6_prefixes = prefixes.get('ipv6', [])
-    
-    response = f"{formatter.bold('BGPView IP')}: {formatter.monospace(ip_addr)}"
-    if rir_name:
-        response += f" | RIR: {formatter.italic(rir_name)}"
-    if ptr_record:
-        response += f" | PTR: {formatter.monospace(ptr_record)}"
-    bot.say(formatter.truncate(response, max_len=400))
-    
-    # Show prefixes
-    if ipv4_prefixes:
-        prefix_info = ipv4_prefixes[0]
-        prefix = prefix_info.get('prefix', '')
-        asn = prefix_info.get('asn', {})
-        asn_num = asn.get('asn', '')
-        asn_name = asn.get('name', '')
-        
-        prefix_line = f"IPv4: {formatter.bold(prefix)}"
-        if asn_num:
-            prefix_line += f" | AS{formatter.monospace(str(asn_num))}"
-        if asn_name:
-            prefix_line += f" ({formatter.italic(asn_name)})"
-        bot.say(formatter.truncate(prefix_line, max_len=400))
-    
-    if ipv6_prefixes:
-        prefix_info = ipv6_prefixes[0]
-        prefix = prefix_info.get('prefix', '')
-        asn = prefix_info.get('asn', {})
-        asn_num = asn.get('asn', '')
-        asn_name = asn.get('name', '')
-        
-        prefix_line = f"IPv6: {formatter.bold(prefix)}"
-        if asn_num:
-            prefix_line += f" | AS{formatter.monospace(str(asn_num))}"
-        if asn_name:
-            prefix_line += f" ({formatter.italic(asn_name)})"
-        bot.say(formatter.truncate(prefix_line, max_len=400))
-
-
-@plugin.command('bgp_asn')
-@plugin.example('.bgp_asn 15169')
-@plugin.example('.bgp_asn AS15169')
-def bgp_asn(bot, trigger):
-    """Get BGP information for an ASN using BGPView API."""
-    # BGPView: https://bgpview.docs.apiary.io
-    # Endpoint: GET https://api.bgpview.io/asn/{asn}
-    
-    if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bgp_asn <ASN>')
-        bot.notice(trigger.nick, 'Examples: .bgp_asn 15169')
-        bot.notice(trigger.nick, '          .bgp_asn AS15169')
-        return
-    
-    asn_input = trigger.group(2).strip().upper()
-    
-    # Remove "AS" prefix if present
-    if asn_input.startswith('AS'):
-        asn_input = asn_input[2:]
-    
+    asn_input = trigger.group(2).strip().upper().replace('AS', '')
     if not asn_input.isdigit():
         bot.notice(trigger.nick, 'ASN must be a number.')
         return
     
-    logger.info(f'BGPView ASN lookup: {asn_input}')
+    logger.info(f'RIPE ASN lookup: {asn_input}')
     
-    url = f'https://api.bgpview.io/asn/{asn_input}'
-    
-    logger.debug(f'Querying BGPView ASN: {url}')
-    data = http.get(url)
-    
-    if not data or 'status' not in data:
-        bot.notice(trigger.nick, 'Failed to query BGPView API.')
+    if not os.path.exists(DB_FILE):
+        bot.notice(trigger.nick, 'RIPE database not found. Use .ripe_update to download it.')
         return
     
-    if data.get('status') != 'ok':
-        error_msg = data.get('status_message', 'Unknown error')
-        bot.notice(trigger.nick, f'BGPView API error: {error_msg}')
+    results = search_database('asn', asn_input, limit=1)
+    
+    if not results:
+        bot.notice(trigger.nick, f'ASN {asn_input} not found in RIPE database.')
         return
     
-    asn_data = data.get('data', {})
-    
-    asn_num = asn_data.get('asn', asn_input)
-    name = asn_data.get('name', 'Unknown')
-    description_short = asn_data.get('description_short', '')
-    description_full = asn_data.get('description_full', [])
-    country_code = asn_data.get('country_code', '')
-    website = asn_data.get('website', '')
-    
-    # RIR information
-    rir_allocation = asn_data.get('rir_allocation', {})
-    rir_name = rir_allocation.get('rir_name', '')
-    date_allocated = rir_allocation.get('date_allocated', '')
-    
-    # Prefixes
-    ipv4_prefixes = asn_data.get('ipv4_prefixes', [])
-    ipv6_prefixes = asn_data.get('ipv6_prefixes', [])
-    
-    response = f"{formatter.bold('AS' + str(asn_num))}: {formatter.bold(name)}"
-    if country_code:
-        response += f" | {formatter.italic(country_code)}"
-    if rir_name:
-        response += f" | RIR: {formatter.monospace(rir_name)}"
-    bot.say(formatter.truncate(response, max_len=400))
-    
-    if description_short:
-        bot.say(f"  {formatter.italic(description_short)}")
-    
-    if website:
-        bot.say(f"  Website: {formatter.monospace(website)}")
-    
-    if ipv4_prefixes:
-        bot.say(f"  IPv4 Prefixes: {formatter.monospace(str(len(ipv4_prefixes)))}")
-    if ipv6_prefixes:
-        bot.say(f"  IPv6 Prefixes: {formatter.monospace(str(len(ipv6_prefixes)))}")
+    obj = results[0]
+    bot.say(format_autnum(obj))
 
 
-@plugin.command('bgp_prefix')
-@plugin.example('.bgp_prefix 8.8.8.0/24')
-@plugin.example('.bgp_prefix 2001:4860::/32')
-def bgp_prefix(bot, trigger):
-    """Get BGP information for an IP prefix using BGPView API."""
-    # BGPView: https://bgpview.docs.apiary.io
-    # Endpoint: GET https://api.bgpview.io/prefix/{prefix}/{cidr}
-    
+@plugin.command('ripe_ip')
+@plugin.example('.ripe_ip 8.8.8.8')
+@plugin.example('.ripe_ip 2001:4860:4860::8888')
+def ripe_ip(bot, trigger):
+    """Query RIPE database for IP address information."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bgp_prefix <prefix>/<cidr>')
-        bot.notice(trigger.nick, 'Examples: .bgp_prefix 8.8.8.0/24')
-        bot.notice(trigger.nick, '          .bgp_prefix 2001:4860::/32')
+        bot.notice(trigger.nick, 'Usage: .ripe_ip <ip_address>')
+        bot.notice(trigger.nick, 'Example: .ripe_ip 8.8.8.8')
         return
     
-    prefix_input = trigger.group(2).strip()
+    ip_input = trigger.group(2).strip()
     
-    if '/' not in prefix_input:
-        bot.notice(trigger.nick, 'Prefix must include CIDR notation (e.g., 8.8.8.0/24)')
+    try:
+        ipaddress.ip_address(ip_input)
+    except ValueError:
+        bot.notice(trigger.nick, 'Invalid IP address.')
         return
     
-    logger.info(f'BGPView prefix lookup: {prefix_input}')
+    logger.info(f'RIPE IP lookup: {ip_input}')
     
-    encoded_prefix = http.quote(prefix_input)
-    url = f'https://api.bgpview.io/prefix/{encoded_prefix}'
-    
-    logger.debug(f'Querying BGPView prefix: {url}')
-    data = http.get(url)
-    
-    if not data or 'status' not in data:
-        bot.notice(trigger.nick, 'Failed to query BGPView API.')
+    if not os.path.exists(DB_FILE):
+        bot.notice(trigger.nick, 'RIPE database not found. Use .ripe_update to download it.')
         return
     
-    if data.get('status') != 'ok':
-        error_msg = data.get('status_message', 'Unknown error')
-        bot.notice(trigger.nick, f'BGPView API error: {error_msg}')
+    results = search_database('ip', ip_input, limit=1)
+    
+    if not results:
+        bot.notice(trigger.nick, f'IP {ip_input} not found in RIPE database.')
         return
     
-    prefix_data = data.get('data', {})
-    
-    prefix = prefix_data.get('prefix', prefix_input)
-    ip = prefix_data.get('ip', '')
-    cidr = prefix_data.get('cidr', '')
-    rir_name = prefix_data.get('rir_name', '')
-    country_code = prefix_data.get('country_code', '')
-    
-    # ASN information
-    asns = prefix_data.get('asns', [])
-    
-    response = f"{formatter.bold('BGPView Prefix')}: {formatter.monospace(prefix)}"
-    if rir_name:
-        response += f" | RIR: {formatter.italic(rir_name)}"
-    if country_code:
-        response += f" | Country: {formatter.monospace(country_code)}"
-    bot.say(formatter.truncate(response, max_len=400))
-    
-    if asns:
-        for asn_info in asns[:3]:  # Show first 3 ASNs
-            asn_num = asn_info.get('asn', {})
-            asn_id = asn_num.get('asn', '') if isinstance(asn_num, dict) else asn_num
-            asn_name = asn_info.get('name', '')
-            name = asn_num.get('name', '') if isinstance(asn_num, dict) and 'name' in asn_num else asn_name
-            
-            asn_line = f"  AS{formatter.monospace(str(asn_id))}"
-            if name:
-                asn_line += f": {formatter.italic(name)}"
-            bot.say(formatter.truncate(asn_line, max_len=400))
+    obj = results[0]
+    bot.say(format_inetnum(obj))
 
 
-@plugin.command('bgp_search_term')
-@plugin.example('.bgp_search_term google')
-@plugin.example('.bgp_search_term cloudflare')
-def bgp_search_term(bot, trigger):
-    """Search for ASNs by name or description using BGPView API."""
-    # BGPView: https://bgpview.docs.apiary.io
-    # Endpoint: GET https://api.bgpview.io/search?query_term={query}
-    
+@plugin.command('ripe_org')
+@plugin.example('.ripe_org GOOGLE')
+@plugin.example('.ripe_org RIPE-NCC')
+def ripe_org(bot, trigger):
+    """Query RIPE database for organisation information."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bgp_search_term <query>')
-        bot.notice(trigger.nick, 'Examples: .bgp_search_term google')
-        bot.notice(trigger.nick, '          .bgp_search_term cloudflare')
+        bot.notice(trigger.nick, 'Usage: .ripe_org <org_id or org_name>')
+        bot.notice(trigger.nick, 'Example: .ripe_org GOOGLE')
+        return
+    
+    org_input = trigger.group(2).strip()
+    
+    logger.info(f'RIPE org lookup: {org_input}')
+    
+    if not os.path.exists(DB_FILE):
+        bot.notice(trigger.nick, 'RIPE database not found. Use .ripe_update to download it.')
+        return
+    
+    results = search_database('org', org_input, limit=3)
+    
+    if not results:
+        bot.notice(trigger.nick, f'Organisation "{org_input}" not found in RIPE database.')
+        return
+    
+    bot.say(f'Found {len(results)} organisation(s):')
+    for obj in results:
+        bot.say(format_organisation(obj))
+
+
+@plugin.command('ripe_search')
+@plugin.example('.ripe_search google')
+def ripe_search(bot, trigger):
+    """Search RIPE database for text matches."""
+    if not trigger.group(2):
+        bot.notice(trigger.nick, 'Usage: .ripe_search <query>')
+        bot.notice(trigger.nick, 'Example: .ripe_search google')
         return
     
     query = trigger.group(2).strip()
     
-    logger.info(f'BGPView search: {query}')
+    logger.info(f'RIPE search: {query}')
     
-    encoded_query = http.quote(query)
-    url = f'https://api.bgpview.io/search?query_term={encoded_query}'
-    
-    logger.debug(f'Searching BGPView: {url}')
-    data = http.get(url)
-    
-    if not data or 'status' not in data:
-        bot.notice(trigger.nick, 'Failed to search BGPView API.')
+    if not os.path.exists(DB_FILE):
+        bot.notice(trigger.nick, 'RIPE database not found. Use .ripe_update to download it.')
         return
     
-    if data.get('status') != 'ok':
-        error_msg = data.get('status_message', 'Unknown error')
-        bot.notice(trigger.nick, f'BGPView API error: {error_msg}')
-        return
+    results = search_database('text', query, limit=5)
     
-    search_data = data.get('data', {})
-    ipv4_prefixes = search_data.get('ipv4_prefixes', [])
-    ipv6_prefixes = search_data.get('ipv6_prefixes', [])
-    asns = search_data.get('asns', [])
-    
-    total_results = len(ipv4_prefixes) + len(ipv6_prefixes) + len(asns)
-    
-    if total_results == 0:
+    if not results:
         bot.notice(trigger.nick, f'No results found for "{query}".')
         return
     
-    bot.say(f'BGPView Search - Found {total_results} result(s) for "{query}":')
-    
-    # Show ASNs
-    if asns:
-        bot.say(f"ASNs ({len(asns)}):")
-        for asn in asns[:3]:
-            asn_num = asn.get('asn', '')
-            name = asn.get('name', 'Unknown')
-            country_code = asn.get('country_code', '')
-            
-            asn_line = f"  AS{formatter.monospace(str(asn_num))}: {formatter.bold(name)}"
-            if country_code:
-                asn_line += f" ({formatter.italic(country_code)})"
-            bot.say(formatter.truncate(asn_line, max_len=400))
-    
-    # Show IPv4 prefixes
-    if ipv4_prefixes:
-        bot.say(f"IPv4 Prefixes ({len(ipv4_prefixes)}):")
-        for prefix_info in ipv4_prefixes[:2]:
-            prefix = prefix_info.get('prefix', '')
-            asn = prefix_info.get('asn', {})
-            asn_num = asn.get('asn', '') if isinstance(asn, dict) else asn
-            
-            prefix_line = f"  {formatter.bold(prefix)}"
-            if asn_num:
-                prefix_line += f" | AS{formatter.monospace(str(asn_num))}"
-            bot.say(formatter.truncate(prefix_line, max_len=400))
-    
-    # Show IPv6 prefixes
-    if ipv6_prefixes:
-        bot.say(f"IPv6 Prefixes ({len(ipv6_prefixes)}):")
-        for prefix_info in ipv6_prefixes[:2]:
-            prefix = prefix_info.get('prefix', '')
-            asn = prefix_info.get('asn', {})
-            asn_num = asn.get('asn', '') if isinstance(asn, dict) else asn
-            
-            prefix_line = f"  {formatter.bold(prefix)}"
-            if asn_num:
-                prefix_line += f" | AS{formatter.monospace(str(asn_num))}"
-            bot.say(formatter.truncate(prefix_line, max_len=400))
-
-
-@plugin.command('bgp_asn_prefixes')
-@plugin.example('.bgp_asn_prefixes 15169')
-@plugin.example('.bgp_asn_prefixes AS15169 ipv4')
-def bgp_asn_prefixes(bot, trigger):
-    """Get IP prefixes announced by an ASN using BGPView API."""
-    # BGPView: https://bgpview.docs.apiary.io
-    # Endpoint: GET https://api.bgpview.io/asn/{asn}/prefixes
-    # Optional: ?ip_version=4 or ?ip_version=6
-    
-    if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bgp_asn_prefixes <ASN> [ipv4|ipv6]')
-        bot.notice(trigger.nick, 'Examples: .bgp_asn_prefixes 15169')
-        bot.notice(trigger.nick, '          .bgp_asn_prefixes AS15169 ipv4')
-        return
-    
-    parts = trigger.group(2).strip().split()
-    asn_input = parts[0].upper()
-    ip_version = parts[1].lower() if len(parts) > 1 else None
-    
-    # Remove "AS" prefix if present
-    if asn_input.startswith('AS'):
-        asn_input = asn_input[2:]
-    
-    if not asn_input.isdigit():
-        bot.notice(trigger.nick, 'ASN must be a number.')
-        return
-    
-    if ip_version and ip_version not in ['ipv4', 'ipv6', '4', '6']:
-        bot.notice(trigger.nick, 'IP version must be ipv4, ipv6, 4, or 6.')
-        return
-    
-    # Normalize IP version
-    if ip_version in ['4', 'ipv4']:
-        ip_version_param = '4'
-    elif ip_version in ['6', 'ipv6']:
-        ip_version_param = '6'
-    else:
-        ip_version_param = None
-    
-    logger.info(f'BGPView ASN prefixes lookup: {asn_input}, version: {ip_version_param}')
-    
-    url = f'https://api.bgpview.io/asn/{asn_input}/prefixes'
-    if ip_version_param:
-        url += f'?ip_version={ip_version_param}'
-    
-    logger.debug(f'Querying BGPView ASN prefixes: {url}')
-    data = http.get(url)
-    
-    if not data or 'status' not in data:
-        bot.notice(trigger.nick, 'Failed to query BGPView API.')
-        return
-    
-    if data.get('status') != 'ok':
-        error_msg = data.get('status_message', 'Unknown error')
-        bot.notice(trigger.nick, f'BGPView API error: {error_msg}')
-        return
-    
-    prefixes_data = data.get('data', {})
-    ipv4_prefixes = prefixes_data.get('ipv4_prefixes', [])
-    ipv6_prefixes = prefixes_data.get('ipv6_prefixes', [])
-    
-    total = len(ipv4_prefixes) + len(ipv6_prefixes)
-    
-    if total == 0:
-        bot.notice(trigger.nick, f'No prefixes found for AS{asn_input}.')
-        return
-    
-    response = f"{formatter.bold('AS' + str(asn_input))} Prefixes:"
-    if ipv4_prefixes:
-        response += f" {formatter.monospace(str(len(ipv4_prefixes)))} IPv4"
-    if ipv6_prefixes:
-        response += f" {formatter.monospace(str(len(ipv6_prefixes)))} IPv6"
-    bot.say(response)
-    
-    # Show sample prefixes
-    if ipv4_prefixes:
-        bot.say(f"IPv4 (showing {min(3, len(ipv4_prefixes))}):")
-        for prefix_info in ipv4_prefixes[:3]:
-            prefix = prefix_info.get('prefix', '')
-            name = prefix_info.get('name', '')
-            
-            prefix_line = f"  {formatter.bold(prefix)}"
-            if name:
-                prefix_line += f" | {formatter.italic(name)}"
-            bot.say(formatter.truncate(prefix_line, max_len=400))
-    
-    if ipv6_prefixes:
-        bot.say(f"IPv6 (showing {min(3, len(ipv6_prefixes))}):")
-        for prefix_info in ipv6_prefixes[:3]:
-            prefix = prefix_info.get('prefix', '')
-            name = prefix_info.get('name', '')
-            
-            prefix_line = f"  {formatter.bold(prefix)}"
-            if name:
-                prefix_line += f" | {formatter.italic(name)}"
-            bot.say(formatter.truncate(prefix_line, max_len=400))
-
-
-@plugin.command('bgp_asn_peers')
-@plugin.example('.bgp_asn_peers 15169')
-def bgp_asn_peers(bot, trigger):
-    """Get BGP peers (upstream/downstream) for an ASN using BGPView API."""
-    # BGPView: https://bgpview.docs.apiary.io
-    # Endpoint: GET https://api.bgpview.io/asn/{asn}/peers
-    
-    if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bgp_asn_peers <ASN>')
-        bot.notice(trigger.nick, 'Example: .bgp_asn_peers 15169')
-        return
-    
-    asn_input = trigger.group(2).strip().upper()
-    
-    # Remove "AS" prefix if present
-    if asn_input.startswith('AS'):
-        asn_input = asn_input[2:]
-    
-    if not asn_input.isdigit():
-        bot.notice(trigger.nick, 'ASN must be a number.')
-        return
-    
-    logger.info(f'BGPView ASN peers lookup: {asn_input}')
-    
-    url = f'https://api.bgpview.io/asn/{asn_input}/peers'
-    
-    logger.debug(f'Querying BGPView ASN peers: {url}')
-    data = http.get(url)
-    
-    if not data or 'status' not in data:
-        bot.notice(trigger.nick, 'Failed to query BGPView API.')
-        return
-    
-    if data.get('status') != 'ok':
-        error_msg = data.get('status_message', 'Unknown error')
-        bot.notice(trigger.nick, f'BGPView API error: {error_msg}')
-        return
-    
-    peers_data = data.get('data', {})
-    ipv4_peers = peers_data.get('ipv4_peers', [])
-    ipv6_peers = peers_data.get('ipv6_peers', [])
-    
-    total = len(ipv4_peers) + len(ipv6_peers)
-    
-    if total == 0:
-        bot.notice(trigger.nick, f'No peers found for AS{asn_input}.')
-        return
-    
-    bot.say(f"{formatter.bold('AS' + str(asn_input))} Peers: {formatter.monospace(str(total))} total")
-    
-    # Show IPv4 peers
-    if ipv4_peers:
-        bot.say(f"IPv4 Peers ({len(ipv4_peers)}, showing {min(3, len(ipv4_peers))}):")
-        for peer in ipv4_peers[:3]:
-            asn = peer.get('asn', {})
-            asn_num = asn.get('asn', '') if isinstance(asn, dict) else peer.get('asn', '')
-            name = asn.get('name', '') if isinstance(asn, dict) else peer.get('name', 'Unknown')
-            
-            peer_line = f"  AS{formatter.monospace(str(asn_num))}: {formatter.italic(name)}"
-            bot.say(formatter.truncate(peer_line, max_len=400))
-    
-    # Show IPv6 peers
-    if ipv6_peers:
-        bot.say(f"IPv6 Peers ({len(ipv6_peers)}, showing {min(3, len(ipv6_peers))}):")
-        for peer in ipv6_peers[:3]:
-            asn = peer.get('asn', {})
-            asn_num = asn.get('asn', '') if isinstance(asn, dict) else peer.get('asn', '')
-            name = asn.get('name', '') if isinstance(asn, dict) else peer.get('name', 'Unknown')
-            
-            peer_line = f"  AS{formatter.monospace(str(asn_num))}: {formatter.italic(name)}"
-            bot.say(formatter.truncate(peer_line, max_len=400))
-
-
-@plugin.command('bgp_asn_upstreams')
-@plugin.example('.bgp_asn_upstreams 15169')
-def bgp_asn_upstreams(bot, trigger):
-    """Get BGP upstream ASNs for an ASN using BGPView API."""
-    # BGPView: https://bgpview.docs.apiary.io
-    # Endpoint: GET https://api.bgpview.io/asn/{asn}/upstreams
-    
-    if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bgp_asn_upstreams <ASN>')
-        bot.notice(trigger.nick, 'Example: .bgp_asn_upstreams 15169')
-        return
-    
-    asn_input = trigger.group(2).strip().upper()
-    
-    # Remove "AS" prefix if present
-    if asn_input.startswith('AS'):
-        asn_input = asn_input[2:]
-    
-    if not asn_input.isdigit():
-        bot.notice(trigger.nick, 'ASN must be a number.')
-        return
-    
-    logger.info(f'BGPView ASN upstreams lookup: {asn_input}')
-    
-    url = f'https://api.bgpview.io/asn/{asn_input}/upstreams'
-    
-    logger.debug(f'Querying BGPView ASN upstreams: {url}')
-    data = http.get(url)
-    
-    if not data or 'status' not in data:
-        bot.notice(trigger.nick, 'Failed to query BGPView API.')
-        return
-    
-    if data.get('status') != 'ok':
-        error_msg = data.get('status_message', 'Unknown error')
-        bot.notice(trigger.nick, f'BGPView API error: {error_msg}')
-        return
-    
-    upstreams_data = data.get('data', {})
-    ipv4_upstreams = upstreams_data.get('ipv4_upstreams', [])
-    ipv6_upstreams = upstreams_data.get('ipv6_upstreams', [])
-    
-    total = len(ipv4_upstreams) + len(ipv6_upstreams)
-    
-    if total == 0:
-        bot.notice(trigger.nick, f'No upstreams found for AS{asn_input}.')
-        return
-    
-    bot.say(f"{formatter.bold('AS' + str(asn_input))} Upstreams: {formatter.monospace(str(total))} total")
-    
-    # Show IPv4 upstreams
-    if ipv4_upstreams:
-        bot.say(f"IPv4 Upstreams ({len(ipv4_upstreams)}, showing {min(3, len(ipv4_upstreams))}):")
-        for upstream in ipv4_upstreams[:3]:
-            asn = upstream.get('asn', {})
-            asn_num = asn.get('asn', '') if isinstance(asn, dict) else upstream.get('asn', '')
-            name = asn.get('name', '') if isinstance(asn, dict) else upstream.get('name', 'Unknown')
-            
-            upstream_line = f"  AS{formatter.monospace(str(asn_num))}: {formatter.italic(name)}"
-            bot.say(formatter.truncate(upstream_line, max_len=400))
-    
-    # Show IPv6 upstreams
-    if ipv6_upstreams:
-        bot.say(f"IPv6 Upstreams ({len(ipv6_upstreams)}, showing {min(3, len(ipv6_upstreams))}):")
-        for upstream in ipv6_upstreams[:3]:
-            asn = upstream.get('asn', {})
-            asn_num = asn.get('asn', '') if isinstance(asn, dict) else upstream.get('asn', '')
-            name = asn.get('name', '') if isinstance(asn, dict) else upstream.get('name', 'Unknown')
-            
-            upstream_line = f"  AS{formatter.monospace(str(asn_num))}: {formatter.italic(name)}"
-            bot.say(formatter.truncate(upstream_line, max_len=400))
-
-
-@plugin.command('bgp_asn_downstreams')
-@plugin.example('.bgp_asn_downstreams 15169')
-def bgp_asn_downstreams(bot, trigger):
-    """Get BGP downstream ASNs for an ASN using BGPView API."""
-    # BGPView: https://bgpview.docs.apiary.io
-    # Endpoint: GET https://api.bgpview.io/asn/{asn}/downstreams
-    
-    if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bgp_asn_downstreams <ASN>')
-        bot.notice(trigger.nick, 'Example: .bgp_asn_downstreams 15169')
-        return
-    
-    asn_input = trigger.group(2).strip().upper()
-    
-    # Remove "AS" prefix if present
-    if asn_input.startswith('AS'):
-        asn_input = asn_input[2:]
-    
-    if not asn_input.isdigit():
-        bot.notice(trigger.nick, 'ASN must be a number.')
-        return
-    
-    logger.info(f'BGPView ASN downstreams lookup: {asn_input}')
-    
-    url = f'https://api.bgpview.io/asn/{asn_input}/downstreams'
-    
-    logger.debug(f'Querying BGPView ASN downstreams: {url}')
-    data = http.get(url)
-    
-    if not data or 'status' not in data:
-        bot.notice(trigger.nick, 'Failed to query BGPView API.')
-        return
-    
-    if data.get('status') != 'ok':
-        error_msg = data.get('status_message', 'Unknown error')
-        bot.notice(trigger.nick, f'BGPView API error: {error_msg}')
-        return
-    
-    downstreams_data = data.get('data', {})
-    ipv4_downstreams = downstreams_data.get('ipv4_downstreams', [])
-    ipv6_downstreams = downstreams_data.get('ipv6_downstreams', [])
-    
-    total = len(ipv4_downstreams) + len(ipv6_downstreams)
-    
-    if total == 0:
-        bot.notice(trigger.nick, f'No downstreams found for AS{asn_input}.')
-        return
-    
-    bot.say(f"{formatter.bold('AS' + str(asn_input))} Downstreams: {formatter.monospace(str(total))} total")
-    
-    # Show IPv4 downstreams
-    if ipv4_downstreams:
-        bot.say(f"IPv4 Downstreams ({len(ipv4_downstreams)}, showing {min(3, len(ipv4_downstreams))}):")
-        for downstream in ipv4_downstreams[:3]:
-            asn = downstream.get('asn', {})
-            asn_num = asn.get('asn', '') if isinstance(asn, dict) else downstream.get('asn', '')
-            name = asn.get('name', '') if isinstance(asn, dict) else downstream.get('name', 'Unknown')
-            
-            downstream_line = f"  AS{formatter.monospace(str(asn_num))}: {formatter.italic(name)}"
-            bot.say(formatter.truncate(downstream_line, max_len=400))
-    
-    # Show IPv6 downstreams
-    if ipv6_downstreams:
-        bot.say(f"IPv6 Downstreams ({len(ipv6_downstreams)}, showing {min(3, len(ipv6_downstreams))}):")
-        for downstream in ipv6_downstreams[:3]:
-            asn = downstream.get('asn', {})
-            asn_num = asn.get('asn', '') if isinstance(asn, dict) else downstream.get('asn', '')
-            name = asn.get('name', '') if isinstance(asn, dict) else downstream.get('name', 'Unknown')
-            
-            downstream_line = f"  AS{formatter.monospace(str(asn_num))}: {formatter.italic(name)}"
-            bot.say(formatter.truncate(downstream_line, max_len=400))
+    bot.say(f'Found {len(results)} result(s) for "{query}":')
+    for obj in results:
+        obj_type = 'inetnum' if 'inetnum' in obj else \
+                   'inet6num' if 'inet6num' in obj else \
+                   'aut-num' if 'aut-num' in obj else \
+                   'organisation' if 'organisation' in obj else 'unknown'
+        
+        if obj_type in ('inetnum', 'inet6num'):
+            bot.say(format_inetnum(obj))
+        elif obj_type == 'aut-num':
+            bot.say(format_autnum(obj))
+        elif obj_type == 'organisation':
+            bot.say(format_organisation(obj))
+        else:
+            bot.say(f"{obj_type}: {str(obj)[:200]}")
 
 
 def setup(bot):
-    """Module setup - BGP APIs loaded."""
+    """Module setup - download database if needed."""
+    ensure_db_dir()
+    if not os.path.exists(DB_FILE):
+        logger.info('RIPE database not found, downloading...')
+        download_database()
     bot.memory['bgp_loaded'] = True
-    bot.memory['bgp_count'] = 1
-    logger.info('BGP module loaded')
+    logger.info('BGP/RIPE module loaded')
 
 
 def shutdown(bot):
     """Module shutdown."""
     bot.memory['bgp_loaded'] = False
-    logger.info('BGP module unloaded')
-
+    logger.info('BGP/RIPE module unloaded')

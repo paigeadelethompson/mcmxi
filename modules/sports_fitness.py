@@ -3,13 +3,14 @@ Sopel module for Sports & Fitness APIs.
 Supports 14 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter, GraphQLClient
+from common import GraphQLClient, HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -121,10 +122,10 @@ APIS = [
 
 @plugin.command('sports_fitness')
 @plugin.command('sportsfitness')
-@plugin.example(f'.sports_fitness')
+@plugin.example('.sports_fitness')
 def sports_fitness_list(bot, trigger):
     """List all available Sports & Fitness APIs."""
-    bot.say(f'Available Sports & Fitness APIs (14):')
+    bot.say('Available Sports & Fitness APIs (14):')
     for i, api in enumerate(APIS[:10], 1):  # Show first 10
         bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
     if len(APIS) > 10:
@@ -132,11 +133,11 @@ def sports_fitness_list(bot, trigger):
 
 
 @plugin.command('sports_fitness_info')
-@plugin.example(f'.sports_fitness_info <name>')
+@plugin.example('.sports_fitness_info <name>')
 def sports_fitness_info(bot, trigger):
     """Get information about a specific Sports & Fitness API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .sports_fitness_info <api_name>')
+        bot.notice(trigger.nick, 'Usage: .sports_fitness_info <api_name>')
         return
 
     search_name = trigger.group(2).strip().lower()
@@ -150,11 +151,11 @@ def sports_fitness_info(bot, trigger):
 
 
 @plugin.command('sports_fitness_search')
-@plugin.example(f'.sports_fitness_search <query>')
+@plugin.example('.sports_fitness_search <query>')
 def sports_fitness_search(bot, trigger):
     """Search Sports & Fitness APIs by name or description."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .sports_fitness_search <query>')
+        bot.notice(trigger.nick, 'Usage: .sports_fitness_search <query>')
         return
 
     query = trigger.group(2).strip().lower()
@@ -182,17 +183,17 @@ def nba_balldontlie(bot, trigger):
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .nba_balldontlie <player_name> or .nba_balldontlie <team_name>')
         return
-    
+
     query = trigger.group(2).strip()
     logger.info(f'NBA lookup: {query}')
-    
+
     encoded_query = http.quote(query)
-    
+
     # Try player search first
     player_url = f'https://www.balldontlie.io/api/v1/players?search={encoded_query}&per_page=3'
     logger.debug(f'Searching NBA players: {player_url}')
     player_data = http.get(player_url)
-    
+
     if player_data and 'data' in player_data and player_data['data']:
         players = player_data['data'][:3]
         bot.say(f'Found {len(players)} player(s) for "{query}":')
@@ -202,17 +203,17 @@ def nba_balldontlie(bot, trigger):
             position = player.get('position', 'N/A')
             team = player.get('team', {})
             team_name = team.get('full_name', 'Free Agent') if team else 'Free Agent'
-            
+
             response = f"{formatter.bold(f'{first_name} {last_name}')}"
             response += f" | Position: {formatter.monospace(position)} | Team: {formatter.italic(team_name)}"
             bot.say(formatter.truncate(response, max_len=400))
         return
-    
+
     # Try team search
     team_url = f'https://www.balldontlie.io/api/v1/teams?search={encoded_query}'
     logger.debug(f'Searching NBA teams: {team_url}')
     team_data = http.get(team_url)
-    
+
     if team_data and 'data' in team_data and team_data['data']:
         teams = team_data['data'][:3]
         bot.say(f'Found {len(teams)} team(s) for "{query}":')
@@ -221,7 +222,7 @@ def nba_balldontlie(bot, trigger):
             city = team.get('city', '')
             conference = team.get('conference', '')
             division = team.get('division', '')
-            
+
             response = f"{formatter.bold(name)}"
             if city:
                 response += f" {formatter.italic(f'({city})')}"
@@ -229,15 +230,16 @@ def nba_balldontlie(bot, trigger):
                 response += f" | {formatter.monospace(conference)} Conference"
             if division:
                 response += f" - {formatter.monospace(division)} Division"
-            
+
             bot.say(formatter.truncate(response, max_len=400))
         return
-    
+
     bot.notice(trigger.nick, f'No NBA player or team found for "{query}"')
 
 
 def setup(bot):
     """Module setup - Sports & Fitness APIs loaded."""
+    register_apis('sports_fitness', APIS)
     bot.memory['sports_fitness_loaded'] = True
     bot.memory['sports_fitness_count'] = 14
     logger.info('Sports & Fitness module loaded')
@@ -257,42 +259,42 @@ def bikes_citybikes(bot, trigger):
     # City Bikes: https://api.citybik.es/v2/
     # Endpoint: GET https://api.citybik.es/v2/networks
     # Network: GET https://api.citybik.es/v2/networks/{network_id}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .bikes_citybikes <city_or_network_id>')
         bot.notice(trigger.nick, 'Examples: .bikes_citybikes paris')
         bot.notice(trigger.nick, '          .bikes_citybikes velib')
         return
-    
+
     query = trigger.group(2).strip().lower()
-    
+
     logger.info(f'City Bikes search: {query}')
-    
+
     # First, search networks
     url = 'https://api.citybik.es/v2/networks'
     logger.debug(f'Fetching networks: {url}')
     data = http.get(url)
-    
+
     if not data or 'networks' not in data:
         bot.notice(trigger.nick, 'Failed to fetch bike networks.')
         return
-    
+
     networks = data.get('networks', [])
-    
+
     # Filter networks by query
     matching = []
     for network in networks:
         network_id = network.get('id', '').lower()
         name = network.get('name', '').lower()
         city = network.get('location', {}).get('city', '').lower()
-        
+
         if query in network_id or query in name or query in city:
             matching.append(network)
-    
+
     if not matching:
         bot.notice(trigger.nick, f'No bike networks found for "{query}"')
         return
-    
+
     # Show first match and get station info
     network = matching[0]
     network_id = network.get('id', '')
@@ -300,19 +302,19 @@ def bikes_citybikes(bot, trigger):
     location = network.get('location', {})
     city = location.get('city', 'Unknown')
     country = location.get('country', '')
-    
+
     response = f"{formatter.bold(network_name)}"
     response += f" ({formatter.italic(city)}"
     if country:
         response += f", {country}"
     response += ")"
     bot.say(response)
-    
+
     # Get station info for this network
     station_url = f'https://api.citybik.es/v2/networks/{network_id}'
     logger.debug(f'Fetching stations: {station_url}')
     station_data = http.get(station_url)
-    
+
     if station_data and 'network' in station_data:
         stations = station_data['network'].get('stations', [])
         if stations:
@@ -334,38 +336,38 @@ def f1_driver(bot, trigger):
     """Get F1 drivers for a year using F1 API."""
     # F1 API: https://f1api.dev
     # Endpoint: GET https://f1api.dev/api/drivers?year={year}
-    
+
     year = trigger.group(2).strip() if trigger.group(2) else '2024'
-    
+
     if not year.isdigit() or len(year) != 4:
         bot.notice(trigger.nick, 'Year must be 4 digits (e.g., 2024)')
         return
-    
+
     logger.info(f'F1 drivers lookup: {year}')
-    
+
     url = f'https://f1api.dev/api/drivers?year={year}'
-    
+
     logger.debug(f'Fetching F1 drivers: {url}')
     data = http.get(url)
-    
+
     if not data or 'drivers' not in data:
         bot.notice(trigger.nick, f'Failed to fetch F1 drivers for {year}.')
         return
-    
+
     drivers = data.get('drivers', [])
     total = data.get('total', len(drivers))
-    
+
     if not drivers:
         bot.notice(trigger.nick, f'No drivers found for year {year}.')
         return
-    
+
     bot.say(f'F1 Drivers {year} (showing {min(5, len(drivers))} of {total}):')
     for driver in drivers[:5]:
         name = driver.get('name', '')
         surname = driver.get('surname', '')
         nationality = driver.get('nationality', 'Unknown')
         number = driver.get('number', '')
-        
+
         response = f"{formatter.bold(f'{name} {surname}')}"
         if number:
             response += f" #{formatter.monospace(number)}"
@@ -383,7 +385,7 @@ def nba_graphql(bot, trigger):
     """Query NBA data using NBA GraphQL API. Supports teams, players, and more."""
     # NBA GraphQL: https://nbaapi.com/graphql/
     # Endpoint: POST https://nbaapi.com/graphql/
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .nba_graphql <type> [options]')
         bot.notice(trigger.nick, 'Types: teams, players, player, team')
@@ -393,10 +395,10 @@ def nba_graphql(bot, trigger):
         bot.notice(trigger.nick, '          .nba_graphql player id:237')
         bot.notice(trigger.nick, '          .nba_graphql team name:lakers')
         return
-    
+
     query_parts = trigger.group(2).strip().split()
     query_type = query_parts[0].lower()
-    
+
     # Parse options (e.g., name:lebron, team:lakers, id:237, limit:5)
     options = {}
     limit = 5
@@ -411,12 +413,12 @@ def nba_graphql(bot, trigger):
                         limit = 5
                 except ValueError:
                     limit = 5
-    
+
     logger.info(f'NBA GraphQL query: {query_type}, options: {options}')
-    
+
     gql_client = GraphQLClient('https://nbaapi.com/graphql/')
     result = None
-    
+
     # Build GraphQL query based on type
     if query_type == 'teams':
         # Query all teams
@@ -432,25 +434,25 @@ def nba_graphql(bot, trigger):
         }
         """
         result = gql_client.execute(query)
-        
+
         if result and 'teams' in result:
             teams = result.get('teams', [])
             # Filter by name if provided
             if 'name' in options:
                 search_name = options['name'].lower()
                 teams = [t for t in teams if search_name in t.get('name', '').lower() or search_name in t.get('city', '').lower()]
-            
+
             if not teams:
                 bot.notice(trigger.nick, 'No teams found matching your criteria.')
                 return
-            
+
             bot.say(f'NBA Teams (showing {min(limit, len(teams))}):')
             for team in teams[:limit]:
                 name = team.get('name', 'Unknown')
                 city = team.get('city', '')
                 conference = team.get('conference', '')
                 division = team.get('division', '')
-                
+
                 response = f"{formatter.bold(name)}"
                 if city:
                     response += f" ({formatter.italic(city)})"
@@ -461,7 +463,7 @@ def nba_graphql(bot, trigger):
                 bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, 'Failed to query teams. Try .nba_balldontlie for NBA data.')
-    
+
     elif query_type == 'players':
         # Query players with optional filters
         query = """
@@ -480,24 +482,24 @@ def nba_graphql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'limit': limit})
-        
+
         if result and 'players' in result:
             players = result.get('players', [])
-            
+
             # Filter by name if provided
             if 'name' in options:
                 search_name = options['name'].lower()
                 players = [p for p in players if search_name in p.get('firstName', '').lower() or search_name in p.get('lastName', '').lower()]
-            
+
             # Filter by team if provided
             if 'team' in options:
                 search_team = options['team'].lower()
                 players = [p for p in players if p.get('team') and (search_team in p['team'].get('name', '').lower() or search_team in p['team'].get('city', '').lower())]
-            
+
             if not players:
                 bot.notice(trigger.nick, 'No players found matching your criteria.')
                 return
-            
+
             bot.say(f'NBA Players (showing {min(limit, len(players))}):')
             for player in players[:limit]:
                 first = player.get('firstName', '')
@@ -505,21 +507,21 @@ def nba_graphql(bot, trigger):
                 position = player.get('position', 'N/A')
                 team = player.get('team', {})
                 team_name = team.get('name', 'Free Agent') if team else 'Free Agent'
-                
+
                 response = f"{formatter.bold(f'{first} {last}')}"
                 response += f" | {formatter.monospace(position)}"
                 response += f" | Team: {formatter.italic(team_name)}"
                 bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, 'Failed to query players. Try .nba_balldontlie for NBA data.')
-    
+
     elif query_type == 'player':
         # Query single player by ID
         player_id = options.get('id', '')
         if not player_id:
             bot.notice(trigger.nick, 'Usage: .nba_graphql player id:<player_id>')
             return
-        
+
         query = """
         query GetPlayer($id: ID!) {
             player(id: $id) {
@@ -537,13 +539,13 @@ def nba_graphql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'id': player_id})
-        
+
         if result and 'player' in result:
             player = result.get('player')
             if not player:
                 bot.notice(trigger.nick, f'Player with ID {player_id} not found.')
                 return
-            
+
             first = player.get('firstName', '')
             last = player.get('lastName', '')
             position = player.get('position', 'N/A')
@@ -551,7 +553,7 @@ def nba_graphql(bot, trigger):
             team_name = team.get('name', 'Free Agent') if team else 'Free Agent'
             height = player.get('height', '')
             weight = player.get('weight', '')
-            
+
             response = f"{formatter.bold(f'{first} {last}')}"
             response += f" | {formatter.monospace(position)}"
             response += f" | Team: {formatter.italic(team_name)}"
@@ -562,16 +564,16 @@ def nba_graphql(bot, trigger):
             bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, f'Failed to query player {player_id}.')
-    
+
     elif query_type == 'team':
         # Query single team by name or ID
         team_name_filter = options.get('name', '')
         team_id = options.get('id', '')
-        
+
         if not team_name_filter and not team_id:
             bot.notice(trigger.nick, 'Usage: .nba_graphql team name:<team_name> or .nba_graphql team id:<team_id>')
             return
-        
+
         # First get all teams to find the one we want
         query = """
         query GetTeams {
@@ -585,27 +587,27 @@ def nba_graphql(bot, trigger):
         }
         """
         result = gql_client.execute(query)
-        
+
         if result and 'teams' in result:
             teams = result.get('teams', [])
-            
+
             # Filter by name or ID
             if team_id:
                 teams = [t for t in teams if str(t.get('id', '')) == team_id]
             elif team_name_filter:
                 search_name = team_name_filter.lower()
                 teams = [t for t in teams if search_name in t.get('name', '').lower() or search_name in t.get('city', '').lower()]
-            
+
             if not teams:
                 bot.notice(trigger.nick, 'Team not found.')
                 return
-            
+
             team = teams[0]
             name = team.get('name', 'Unknown')
             city = team.get('city', '')
             conference = team.get('conference', '')
             division = team.get('division', '')
-            
+
             response = f"{formatter.bold(name)}"
             if city:
                 response += f" ({formatter.italic(city)})"
@@ -613,7 +615,7 @@ def nba_graphql(bot, trigger):
             bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, 'Failed to query team.')
-    
+
     else:
         bot.notice(trigger.nick, f'Unknown query type: {query_type}. Use: teams, players, player, or team')
         if not result:
@@ -628,42 +630,42 @@ def football_openligadb(bot, trigger):
     # OpenLigaDB: https://www.openligadb.de
     # Endpoint: GET https://www.openligadb.de/api/getmatchdata/{league}/{season}/{group}
     # Leagues: bl1 (Bundesliga), bl2 (2. Bundesliga), bl3 (3. Liga)
-    
+
     league = trigger.group(2).strip().lower() if trigger.group(2) else 'bl1'
-    
+
     # Validate league
     valid_leagues = ['bl1', 'bl2', 'bl3']
     if league not in valid_leagues:
         bot.notice(trigger.nick, f'Invalid league. Valid: {", ".join(valid_leagues)}')
         return
-    
+
     logger.info(f'OpenLigaDB lookup: {league}')
-    
+
     # Get current season (2024), group 1
     url = f'https://www.openligadb.de/api/getmatchdata/{league}/2024/1'
-    
+
     logger.debug(f'Fetching matches: {url}')
     data = http.get(url)
-    
+
     if not data or not isinstance(data, list):
         bot.notice(trigger.nick, 'Failed to fetch match data.')
         return
-    
+
     if not data:
         bot.notice(trigger.nick, f'No matches found for {league}.')
         return
-    
+
     # Show upcoming/recent matches
     matches = data[:5]
     league_name = {'bl1': 'Bundesliga', 'bl2': '2. Bundesliga', 'bl3': '3. Liga'}.get(league, league)
-    
+
     bot.say(f'{formatter.bold(league_name)} matches (showing {len(matches)}):')
     for match in matches:
         team1 = match.get('Team1', {}).get('TeamName', 'Unknown')
         team2 = match.get('Team2', {}).get('TeamName', 'Unknown')
         match_date = match.get('MatchDateTime', '')
         result = match.get('MatchResults', [])
-        
+
         response = f"{formatter.bold(team1)} vs {formatter.bold(team2)}"
         if result:
             # Get final result
@@ -675,5 +677,5 @@ def football_openligadb(bot, trigger):
         if match_date:
             date_short = match_date[:10] if len(match_date) >= 10 else match_date
             response += f" | {formatter.monospace(date_short)}"
-        
+
         bot.say(formatter.truncate(response, max_len=400))

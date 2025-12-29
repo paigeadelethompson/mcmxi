@@ -3,13 +3,14 @@ Sopel module for Video APIs.
 Supports 26 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -203,63 +204,14 @@ APIS = [
 ]
 
 
-@plugin.command('video')
-@plugin.command('video')
-@plugin.example(f'.video')
-def video_list(bot, trigger):
-    """List all available Video APIs."""
-    bot.say(f'Available Video APIs (26):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .video_info <name> for details')
 
 
-@plugin.command('video_info')
-@plugin.example(f'.video_info <name>')
-def video_info(bot, trigger):
-    """Get information about a specific Video API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .video_info <api_name>')
-        return
 
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('video_search')
-@plugin.example(f'.video_search <query>')
-def video_search(bot, trigger):
-    """Search Video APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .video_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 def setup(bot):
     """Module setup - Video APIs loaded."""
+    register_apis('video', APIS)
     bot.memory['video_loaded'] = True
     bot.memory['video_count'] = 26
 
@@ -276,22 +228,22 @@ def quote_breakingbad(bot, trigger):
     # Breaking Bad Quotes: https://github.com/shevabam/breaking-bad-quotes
     # Endpoint: GET https://api.breakingbadquotes.xyz/v1/quotes
     # Returns: Array with quote object containing quote and author
-    
+
     logger.info('Breaking Bad quote lookup')
-    
+
     url = 'https://api.breakingbadquotes.xyz/v1/quotes'
-    
+
     logger.debug(f'Fetching quote: {url}')
     data = http.get(url)
-    
+
     if not data or not isinstance(data, list) or len(data) == 0:
         bot.notice(trigger.nick, 'Failed to fetch Breaking Bad quote.')
         return
-    
+
     quote_obj = data[0]
     quote_text = quote_obj.get('quote', '')
     author = quote_obj.get('author', 'Unknown')
-    
+
     response = f"{formatter.italic(quote_text)}"
     bot.say(formatter.truncate(response, max_len=400))
     if author:

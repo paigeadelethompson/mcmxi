@@ -3,13 +3,14 @@ Sopel module for Anime APIs.
 Supports 10 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -90,62 +91,6 @@ APIS = [
     },
 ]
 
-
-@plugin.command('anime')
-@plugin.command('anime')
-@plugin.example(f'.anime')
-def anime_list(bot, trigger):
-    """List all available Anime APIs."""
-    bot.say(f'Available Anime APIs (10):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .anime_info <name> for details')
-
-
-@plugin.command('anime_info')
-@plugin.example(f'.anime_info <name>')
-def anime_info(bot, trigger):
-    """Get information about a specific Anime API."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .anime_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.notice(trigger.nick, f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('anime_search')
-@plugin.example(f'.anime_search <query>')
-def anime_search(bot, trigger):
-    """Search Anime APIs by name or description."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .anime_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
-
-
 @plugin.command('anime_jikan')
 @plugin.example('.anime_jikan naruto')
 @plugin.example('.anime_jikan 1')
@@ -154,10 +99,10 @@ def anime_jikan(bot, trigger):
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .anime_jikan <anime_name> or .anime_jikan <anime_id>')
         return
-    
+
     query = trigger.group(2).strip()
     logger.info(f'Anime search: {query}')
-    
+
     if query.isdigit():
         get_anime_by_id(bot, trigger.nick, int(query))
     else:
@@ -168,20 +113,20 @@ def search_anime(bot, nick: str, query: str):
     """Search for anime by name."""
     encoded_query = http.quote(query)
     url = f'https://api.jikan.moe/v4/anime?q={encoded_query}&limit=3'
-    
+
     logger.debug(f'Searching anime: {url}')
     data = http.get(url)
-    
+
     if not data or 'data' not in data:
         bot.notice(nick, 'No anime found or API error. Please try again.')
         return
-    
+
     results = data.get('data', [])[:3]
-    
+
     if not results:
         bot.notice(nick, f'No anime found for "{query}"')
         return
-    
+
     bot.say(f'Found {len(results)} result(s) for "{query}":')
     for anime in results:
         title = anime.get('title', 'Unknown')
@@ -189,28 +134,28 @@ def search_anime(bot, nick: str, query: str):
         episodes = anime.get('episodes', '?')
         status = anime.get('status', 'Unknown')
         mal_id = anime.get('mal_id', '')
-        
+
         response = f"{formatter.bold(title)}"
         if score and score != 'N/A':
             response += f" | Score: {formatter.bold(f'{score}/10')}"
         response += f" | Episodes: {formatter.monospace(str(episodes))} | Status: {formatter.italic(status)}"
         if mal_id:
             response += f" | ID: {formatter.monospace(str(mal_id))}"
-        
+
         bot.say(formatter.truncate(response, max_len=400))
 
 
 def get_anime_by_id(bot, nick: str, anime_id: int):
     """Get anime details by MyAnimeList ID."""
     url = f'https://api.jikan.moe/v4/anime/{anime_id}/full'
-    
+
     logger.debug(f'Fetching anime by ID: {url}')
     data = http.get(url)
-    
+
     if not data or 'data' not in data:
         bot.notice(nick, f'Anime with ID {anime_id} not found.')
         return
-    
+
     anime = data['data']
     title = anime.get('title', 'Unknown')
     title_english = anime.get('title_english', '')
@@ -218,7 +163,7 @@ def get_anime_by_id(bot, nick: str, anime_id: int):
     episodes = anime.get('episodes', '?')
     status = anime.get('status', 'Unknown')
     synopsis = anime.get('synopsis', 'No synopsis available.')
-    
+
     response = f"{formatter.bold(title)}"
     if title_english and title_english != title:
         response += f" {formatter.italic(f'({title_english})')}"
@@ -226,7 +171,7 @@ def get_anime_by_id(bot, nick: str, anime_id: int):
         response += f" | Score: {formatter.bold(f'{score}/10')}"
     response += f" | Episodes: {formatter.monospace(str(episodes))} | Status: {formatter.italic(status)}"
     bot.say(formatter.truncate(response, max_len=400))
-    
+
     if synopsis and synopsis != 'No synopsis available.':
         synopsis_short = formatter.truncate(synopsis.replace('\n', ' '), max_len=300)
         bot.say(f"{formatter.italic('Synopsis:')} {synopsis_short}")
@@ -234,6 +179,7 @@ def get_anime_by_id(bot, nick: str, anime_id: int):
 
 def setup(bot):
     """Module setup - Anime APIs loaded."""
+    register_apis('anime', APIS)
     bot.memory['anime_loaded'] = True
     bot.memory['anime_count'] = 10
     logger.info('Anime module loaded')

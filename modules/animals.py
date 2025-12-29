@@ -3,13 +3,14 @@ Sopel module for Animals APIs.
 Supports 16 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -133,59 +134,6 @@ APIS = [
 ]
 
 
-@plugin.command('animals')
-@plugin.command('animals')
-@plugin.example(f'.animals')
-def animals_list(bot, trigger):
-    """List all available Animals APIs."""
-    bot.say(f'Available Animals APIs (16):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .animals_info <name> for details')
-
-
-@plugin.command('animals_info')
-@plugin.example(f'.animals_info <name>')
-def animals_info(bot, trigger):
-    """Get information about a specific Animals API."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .animals_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.notice(trigger.nick, f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('animals_search')
-@plugin.example(f'.animals_search <query>')
-def animals_search(bot, trigger):
-    """Search Animals APIs by name or description."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .animals_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.notice(trigger.nick, f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 @plugin.command('dog_dogceo')
@@ -194,9 +142,9 @@ def animals_search(bot, trigger):
 def dog_dogceo(bot, trigger):
     """Get random dog picture or by breed using Dog CEO API."""
     breed = trigger.group(2).strip().lower() if trigger.group(2) else None
-    
+
     logger.info(f'Dog API request: breed={breed or "random"}')
-    
+
     if breed:
         # Get random image by breed
         encoded_breed = http.quote(breed)
@@ -204,17 +152,17 @@ def dog_dogceo(bot, trigger):
     else:
         # Get random dog image
         url = 'https://dog.ceo/api/breeds/image/random'
-    
+
     logger.debug(f'Fetching dog image: {url}')
     data = http.get(url)
-    
+
     if not data or data.get('status') != 'success':
         if breed:
             bot.notice(trigger.nick, f'Breed "{breed}" not found or API error.')
         else:
             bot.notice(trigger.nick, 'Failed to fetch dog image. Please try again.')
         return
-    
+
     image_url = data.get('message', '')
     if image_url:
         # Extract breed from URL if available
@@ -231,6 +179,7 @@ def dog_dogceo(bot, trigger):
 
 def setup(bot):
     """Module setup - Animals APIs loaded."""
+    register_apis('animals', APIS)
     bot.memory['animals_loaded'] = True
     bot.memory['animals_count'] = 16
     logger.info('Animals module loaded')

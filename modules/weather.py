@@ -3,13 +3,14 @@ Sopel module for Weather APIs.
 Supports 9 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -84,59 +85,6 @@ APIS = [
 ]
 
 
-@plugin.command('weather')
-@plugin.command('weather')
-@plugin.example(f'.weather')
-def weather_list(bot, trigger):
-    """List all available Weather APIs."""
-    bot.say(f'Available Weather APIs (9):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .weather_info <name> for details')
-
-
-@plugin.command('weather_info')
-@plugin.example(f'.weather_info <name>')
-def weather_info(bot, trigger):
-    """Get information about a specific Weather API."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .weather_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.notice(trigger.nick, f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('weather_search')
-@plugin.example(f'.weather_search <query>')
-def weather_search(bot, trigger):
-    """Search Weather APIs by name or description."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .weather_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 @plugin.command('weather_openmeteo')
@@ -147,10 +95,10 @@ def weather_openmeteo(bot, trigger):
         bot.notice(trigger.nick, 'Usage: .weather_openmeteo <lat,lon>')
         bot.notice(trigger.nick, 'Example: .weather_openmeteo 47.6062,-122.3321')
         return
-    
+
     query = trigger.group(2).strip()
     logger.info(f'Weather query: {query}')
-    
+
     if ',' in query:
         try:
             lat, lon = map(float, query.split(','))
@@ -164,29 +112,29 @@ def weather_openmeteo(bot, trigger):
 def get_weather_by_coords(bot, nick: str, lat: float, lon: float):
     """Get weather by coordinates using Open-Meteo."""
     url = f'https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto'
-    
+
     logger.debug(f'Fetching weather from Open-Meteo: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(nick, 'Failed to fetch weather data. Please try again later.')
         return
-    
+
     try:
         current = data.get('current', {})
         temp = current.get('temperature_2m', 'N/A')
         humidity = current.get('relative_humidity_2m', 'N/A')
         wind_speed = current.get('wind_speed_10m', 'N/A')
         weather_code = current.get('weather_code', 0)
-        
+
         weather_desc = get_weather_description(weather_code)
-        
+
         response = f"Weather at {formatter.monospace(f'{lat:.2f},{lon:.2f}')}: {formatter.bold(f'{temp}°C')}"
         response += f" | Humidity: {formatter.monospace(f'{humidity}%')} | Wind: {formatter.monospace(f'{wind_speed} km/h')}"
         response += f" | {formatter.italic(weather_desc)}"
-        
+
         bot.say(formatter.truncate(response, max_len=400))
-        
+
     except Exception as e:
         logger.exception('Error parsing weather data', e)
         bot.notice(nick, 'Error processing weather data.')
@@ -211,6 +159,7 @@ def get_weather_description(code: int) -> str:
 
 def setup(bot):
     """Module setup - Weather APIs loaded."""
+    register_apis('weather', APIS)
     bot.memory['weather_loaded'] = True
     bot.memory['weather_count'] = 9
     logger.info('Weather module loaded')

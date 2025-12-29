@@ -3,13 +3,14 @@ Sopel module for Games & Comics APIs.
 Supports 60 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter, GraphQLClient
+from common import GraphQLClient, HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -443,10 +444,10 @@ APIS = [
 
 @plugin.command('games_comics')
 @plugin.command('gamescomics')
-@plugin.example(f'.games_comics')
+@plugin.example('.games_comics')
 def games_comics_list(bot, trigger):
     """List all available Games & Comics APIs."""
-    bot.say(f'Available Games & Comics APIs (60):')
+    bot.say('Available Games & Comics APIs (60):')
     for i, api in enumerate(APIS[:10], 1):  # Show first 10
         bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
     if len(APIS) > 10:
@@ -454,11 +455,11 @@ def games_comics_list(bot, trigger):
 
 
 @plugin.command('games_comics_info')
-@plugin.example(f'.games_comics_info <name>')
+@plugin.example('.games_comics_info <name>')
 def games_comics_info(bot, trigger):
     """Get information about a specific Games & Comics API."""
     if not trigger.group(2):
-        bot.say(f'Usage: .games_comics_info <api_name>')
+        bot.say('Usage: .games_comics_info <api_name>')
         return
 
     search_name = trigger.group(2).strip().lower()
@@ -472,11 +473,11 @@ def games_comics_info(bot, trigger):
 
 
 @plugin.command('games_comics_search')
-@plugin.example(f'.games_comics_search <query>')
+@plugin.example('.games_comics_search <query>')
 def games_comics_search(bot, trigger):
     """Search Games & Comics APIs by name or description."""
     if not trigger.group(2):
-        bot.say(f'Usage: .games_comics_search <query>')
+        bot.say('Usage: .games_comics_search <query>')
         return
 
     query = trigger.group(2).strip().lower()
@@ -504,27 +505,27 @@ def pokemon_pokeapi(bot, trigger):
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .pokemon_pokeapi <name> or .pokemon_pokeapi <id>')
         return
-    
+
     query = trigger.group(2).strip().lower()
     logger.info(f'Pokemon lookup: {query}')
-    
+
     # PokéAPI accepts both ID and name in the path
     encoded_query = http.quote(query.lower())
     url = f'https://pokeapi.co/api/v2/pokemon/{encoded_query}/'
-    
+
     logger.debug(f'Fetching Pokemon: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, f'Pokémon "{query}" not found.')
         return
-    
+
     name = data.get('name', 'Unknown').title()
     pokemon_id = data.get('id', '')
     height = data.get('height', 0) / 10  # Convert to meters
     weight = data.get('weight', 0) / 10  # Convert to kg
     types = [t['type']['name'] for t in data.get('types', [])]
-    
+
     response = f"{formatter.bold(name)} {formatter.monospace(f'#{pokemon_id}')}"
     response += f" | Height: {formatter.monospace(f'{height}m')} | Weight: {formatter.monospace(f'{weight}kg')}"
     response += f" | Types: {formatter.italic(', '.join(types))}"
@@ -540,7 +541,7 @@ def pokemon_graphql(bot, trigger):
     """Query Pokemon data using GraphQL Pokemon API (favware)."""
     # GraphQL Pokemon: https://github.com/favware/graphql-pokemon
     # Endpoint: https://graphqlpokemon.favware.tech/
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .pokemon_graphql <type> [options]')
         bot.notice(trigger.nick, 'Types: pokemon, pokemons, type, types')
@@ -549,10 +550,10 @@ def pokemon_graphql(bot, trigger):
         bot.notice(trigger.nick, '          .pokemon_graphql pokemons generation:1 limit:5')
         bot.notice(trigger.nick, '          .pokemon_graphql type fire')
         return
-    
+
     query_parts = trigger.group(2).strip().split()
     query_type = query_parts[0].lower()
-    
+
     # Parse options
     options = {}
     limit = 5
@@ -567,20 +568,20 @@ def pokemon_graphql(bot, trigger):
                         limit = 5
                 except ValueError:
                     limit = 5
-    
+
     logger.info(f'GraphQL Pokemon query: {query_type}, options: {options}')
-    
+
     gql_client = GraphQLClient('https://graphqlpokemon.favware.tech/')
-    
+
     if query_type == 'pokemon':
         # Query single Pokemon by name or ID
         pokemon_id = options.get('id', '')
         pokemon_name = options.get('name', '')
-        
+
         if not pokemon_id and not pokemon_name:
             bot.notice(trigger.nick, 'Usage: .pokemon_graphql pokemon name:<name> or id:<id>')
             return
-        
+
         identifier = pokemon_id if pokemon_id else pokemon_name.lower()
         query = """
         query GetPokemon($id: String!) {
@@ -602,20 +603,20 @@ def pokemon_graphql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'id': identifier})
-        
+
         if result and 'getPokemonByDexNumber' in result:
             pokemon = result.get('getPokemonByDexNumber')
             if not pokemon:
                 bot.notice(trigger.nick, f'Pokemon "{identifier}" not found.')
                 return
-            
+
             num = pokemon.get('num', '')
             species = pokemon.get('species', 'Unknown')
             types = pokemon.get('types', [])
             stats = pokemon.get('baseStats', {})
             height = pokemon.get('height', '')
             weight = pokemon.get('weight', '')
-            
+
             response = f"{formatter.bold(species)} {formatter.monospace(f'#{num}')}"
             if types:
                 response += f" | Types: {formatter.italic(', '.join(types))}"
@@ -630,11 +631,11 @@ def pokemon_graphql(bot, trigger):
             bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, f'Failed to fetch Pokemon "{identifier}".')
-    
+
     elif query_type == 'pokemons':
         # List Pokemon with optional filters
         generation = options.get('generation', '')
-        
+
         query = """
         query GetPokemons($take: Int) {
             getAllPokemon(take: $take) {
@@ -645,10 +646,10 @@ def pokemon_graphql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'take': limit})
-        
+
         if result and 'getAllPokemon' in result:
             pokemons = result.get('getAllPokemon', [])
-            
+
             # Filter by generation if specified
             if generation:
                 try:
@@ -665,24 +666,24 @@ def pokemon_graphql(bot, trigger):
                             pokemons = [p for p in pokemons if start <= int(p.get('num', 999)) <= end]
                 except ValueError:
                     pass
-            
+
             if not pokemons:
                 bot.notice(trigger.nick, 'No Pokemon found matching criteria.')
                 return
-            
+
             bot.say(f'Pokemon (showing {min(limit, len(pokemons))}):')
             for pokemon in pokemons[:limit]:
                 num = pokemon.get('num', '')
                 species = pokemon.get('species', 'Unknown')
                 types = pokemon.get('types', [])
-                
+
                 response = f"{formatter.bold(species)} {formatter.monospace(f'#{num}')}"
                 if types:
                     response += f" | {formatter.italic(', '.join(types))}"
                 bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, 'Failed to fetch Pokemon list.')
-    
+
     elif query_type in ['type', 'types']:
         # Get type information
         type_name = options.get('name', ' '.join(query_parts[1:])).lower() if len(query_parts) > 1 else ''
@@ -690,7 +691,7 @@ def pokemon_graphql(bot, trigger):
             bot.notice(trigger.nick, 'Usage: .pokemon_graphql type <type_name>')
             bot.notice(trigger.nick, 'Example: .pokemon_graphql type fire')
             return
-        
+
         query = """
         query GetType($type: String!) {
             getType(type: $type) {
@@ -707,16 +708,16 @@ def pokemon_graphql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'type': type_name.capitalize()})
-        
+
         if result and 'getType' in result:
             type_data = result.get('getType')
             if not type_data:
                 bot.notice(trigger.nick, f'Type "{type_name}" not found.')
                 return
-            
+
             name = type_data.get('name', type_name)
             effectiveness = type_data.get('effectiveness', {})
-            
+
             response = f"{formatter.bold(name)} Type"
             double_effective = effectiveness.get('doubleEffectiveTypes', [])
             if double_effective:
@@ -724,7 +725,7 @@ def pokemon_graphql(bot, trigger):
             bot.say(formatter.truncate(response, max_len=400))
         else:
             bot.notice(trigger.nick, f'Failed to fetch type "{type_name}".')
-    
+
     else:
         bot.notice(trigger.nick, f'Unknown query type: {query_type}. Use: pokemon, pokemons, or type')
 
@@ -737,7 +738,7 @@ def pokeapi_graphql(bot, trigger):
     """Query Pokemon data using PokéAPI GraphQL (mazipan)."""
     # PokéAPI GraphQL: https://github.com/mazipan/graphql-pokeapi
     # Endpoint: https://beta.pokeapi.co/graphql/v1beta
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .pokeapi_graphql <type> [options]')
         bot.notice(trigger.nick, 'Types: pokemon, pokemons')
@@ -745,10 +746,10 @@ def pokeapi_graphql(bot, trigger):
         bot.notice(trigger.nick, '          .pokeapi_graphql pokemon id:25')
         bot.notice(trigger.nick, '          .pokeapi_graphql pokemons limit:10')
         return
-    
+
     query_parts = trigger.group(2).strip().split()
     query_type = query_parts[0].lower()
-    
+
     # Parse options
     options = {}
     limit = 5
@@ -763,23 +764,23 @@ def pokeapi_graphql(bot, trigger):
                         limit = 5
                 except ValueError:
                     limit = 5
-    
+
     logger.info(f'PokeAPI GraphQL query: {query_type}, options: {options}')
-    
+
     # Try the GraphQL endpoint (may vary, this is a common pattern)
     gql_client = GraphQLClient('https://beta.pokeapi.co/graphql/v1beta')
-    
+
     if query_type == 'pokemon':
         # Query single Pokemon by name or ID
         pokemon_id = options.get('id', '')
         pokemon_name = options.get('name', '').lower()
-        
+
         if not pokemon_id and not pokemon_name:
             bot.notice(trigger.nick, 'Usage: .pokeapi_graphql pokemon name:<name> or id:<id>')
             return
-        
+
         identifier = pokemon_id if pokemon_id else pokemon_name
-        
+
         query = """
         query GetPokemon($id: Int, $name: String) {
             pokemon_v2_pokemon(where: {_or: [{id: {_eq: $id}}, {name: {_ilike: $name}}]}, limit: 1) {
@@ -806,15 +807,15 @@ def pokeapi_graphql(bot, trigger):
             variables['id'] = int(pokemon_id)
         else:
             variables['name'] = f'%{pokemon_name}%'
-        
+
         result = gql_client.execute(query, variables)
-        
+
         if result and 'pokemon_v2_pokemon' in result:
             pokemons = result.get('pokemon_v2_pokemon', [])
             if not pokemons:
                 bot.notice(trigger.nick, f'Pokemon "{identifier}" not found.')
                 return
-            
+
             pokemon = pokemons[0]
             pokemon_id_actual = pokemon.get('id', '')
             name = pokemon.get('name', 'Unknown').title()
@@ -825,14 +826,14 @@ def pokeapi_graphql(bot, trigger):
                 type_name = type_data.get('pokemon_v2_type', {}).get('name', '')
                 if type_name:
                     types.append(type_name)
-            
+
             stats = {}
             for stat_data in pokemon.get('pokemon_v2_pokemonstats', []):
                 stat_name = stat_data.get('pokemon_v2_stat', {}).get('name', '')
                 base_stat = stat_data.get('base_stat', 0)
                 if stat_name:
                     stats[stat_name] = base_stat
-            
+
             response = f"{formatter.bold(name)} {formatter.monospace(f'#{pokemon_id_actual}')}"
             if types:
                 response += f" | Types: {formatter.italic(', '.join(types))}"
@@ -846,7 +847,7 @@ def pokeapi_graphql(bot, trigger):
         else:
             bot.notice(trigger.nick, f'Failed to fetch Pokemon "{identifier}". The API endpoint may be different.')
             bot.notice(trigger.nick, 'Try using .pokemon_pokeapi for REST API instead.')
-    
+
     elif query_type == 'pokemons':
         # List Pokemon
         query = """
@@ -863,13 +864,13 @@ def pokeapi_graphql(bot, trigger):
         }
         """
         result = gql_client.execute(query, {'limit': limit})
-        
+
         if result and 'pokemon_v2_pokemon' in result:
             pokemons = result.get('pokemon_v2_pokemon', [])
             if not pokemons:
                 bot.notice(trigger.nick, 'No Pokemon found.')
                 return
-            
+
             bot.say(f'Pokemon (showing {len(pokemons)}):')
             for pokemon in pokemons:
                 pokemon_id_actual = pokemon.get('id', '')
@@ -879,7 +880,7 @@ def pokeapi_graphql(bot, trigger):
                     type_name = type_data.get('pokemon_v2_type', {}).get('name', '')
                     if type_name:
                         types.append(type_name)
-                
+
                 response = f"{formatter.bold(name)} {formatter.monospace(f'#{pokemon_id_actual}')}"
                 if types:
                     response += f" | {formatter.italic(', '.join(types))}"
@@ -887,13 +888,14 @@ def pokeapi_graphql(bot, trigger):
         else:
             bot.notice(trigger.nick, 'Failed to fetch Pokemon list. The API endpoint may be different.')
             bot.notice(trigger.nick, 'Try using .pokemon_pokeapi for REST API instead.')
-    
+
     else:
         bot.notice(trigger.nick, f'Unknown query type: {query_type}. Use: pokemon or pokemons')
 
 
 def setup(bot):
     """Module setup - Games & Comics APIs loaded."""
+    register_apis('games_comics', APIS)
     bot.memory['games_comics_loaded'] = True
     bot.memory['games_comics_count'] = 60
     logger.info('Games & Comics module loaded')

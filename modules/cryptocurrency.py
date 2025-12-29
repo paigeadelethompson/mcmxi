@@ -3,13 +3,14 @@ Sopel module for Cryptocurrency APIs.
 Supports 15 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -126,59 +127,6 @@ APIS = [
 ]
 
 
-@plugin.command('cryptocurrency')
-@plugin.command('cryptocurrency')
-@plugin.example(f'.cryptocurrency')
-def cryptocurrency_list(bot, trigger):
-    """List all available Cryptocurrency APIs."""
-    bot.say(f'Available Cryptocurrency APIs (15):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .cryptocurrency_info <name> for details')
-
-
-@plugin.command('cryptocurrency_info')
-@plugin.example(f'.cryptocurrency_info <name>')
-def cryptocurrency_info(bot, trigger):
-    """Get information about a specific Cryptocurrency API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .cryptocurrency_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('cryptocurrency_search')
-@plugin.example(f'.cryptocurrency_search <query>')
-def cryptocurrency_search(bot, trigger):
-    """Search Cryptocurrency APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .cryptocurrency_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 @plugin.command('crypto_coingecko')
@@ -190,35 +138,35 @@ def crypto_coingecko(bot, trigger):
         bot.notice(trigger.nick, 'Usage: .crypto_coingecko <coin_name>')
         bot.notice(trigger.nick, 'Example: .crypto_coingecko bitcoin')
         return
-    
+
     coin = trigger.group(2).strip().lower()
     logger.info(f'Crypto price lookup: {coin}')
-    
+
     # First, search for the coin
     encoded_coin = http.quote(coin)
     search_url = f'https://api.coingecko.com/api/v3/search?query={encoded_coin}'
     search_data = http.get(search_url)
-    
+
     if not search_data or 'coins' not in search_data or not search_data['coins']:
         bot.notice(trigger.nick, f'Cryptocurrency "{coin}" not found.')
         return
-    
+
     # Get the first result
     coin_id = search_data['coins'][0]['id']
     coin_name = search_data['coins'][0]['name']
-    
+
     # Get price data
     price_url = f'https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd&include_24hr_change=true'
     price_data = http.get(price_url)
-    
+
     if not price_data or coin_id not in price_data:
         bot.notice(trigger.nick, 'Failed to fetch price data. Please try again.')
         return
-    
+
     coin_data = price_data[coin_id]
     price = coin_data.get('usd', 'N/A')
     change_24h = coin_data.get('usd_24h_change', 'N/A')
-    
+
     if price != 'N/A':
         price_str = f"${price:,.2f}" if isinstance(price, (int, float)) else str(price)
         change_str = f"{change_24h:+.2f}%" if isinstance(change_24h, (int, float)) else str(change_24h)
@@ -227,7 +175,7 @@ def crypto_coingecko(bot, trigger):
             change_formatted = formatter.bold(change_str) if change_24h >= 0 else change_str
         else:
             change_formatted = change_str
-        
+
         response = f"{formatter.bold(coin_name)} {formatter.monospace(f'({coin_id})')}: {formatter.bold(price_str)}"
         response += f" | 24h: {change_formatted}"
         bot.say(formatter.truncate(response, max_len=400))
@@ -242,25 +190,25 @@ def crypto_coincap(bot, trigger):
     """Get cryptocurrency price using CoinCap API."""
     # CoinCap: https://docs.coincap.io/
     # Endpoint: GET https://api.coincap.io/v2/assets?search={query}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .crypto_coincap <coin_name>')
         bot.notice(trigger.nick, 'Example: .crypto_coincap bitcoin')
         return
-    
+
     coin = trigger.group(2).strip().lower()
     logger.info(f'CoinCap lookup: {coin}')
-    
+
     encoded_coin = http.quote(coin)
     url = f'https://api.coincap.io/v2/assets?search={encoded_coin}'
-    
+
     logger.debug(f'Searching CoinCap: {url}')
     data = http.get(url)
-    
+
     if not data or 'data' not in data or not data['data']:
         bot.notice(trigger.nick, f'Cryptocurrency "{coin}" not found.')
         return
-    
+
     # Get the first result
     asset = data['data'][0]
     name = asset.get('name', 'Unknown')
@@ -268,16 +216,16 @@ def crypto_coincap(bot, trigger):
     price = asset.get('priceUsd', '0')
     change_24h = asset.get('changePercent24Hr', '0')
     market_cap = asset.get('marketCapUsd', '0')
-    
+
     try:
         price_float = float(price)
         change_float = float(change_24h)
         market_cap_float = float(market_cap)
-        
+
         price_str = f"${price_float:,.2f}"
         change_str = f"{change_float:+.2f}%"
         change_formatted = formatter.bold(change_str) if change_float >= 0 else change_str
-        
+
         response = f"{formatter.bold(name)} {formatter.monospace(f'({symbol})')}: {formatter.bold(price_str)}"
         response += f" | 24h: {change_formatted}"
         if market_cap_float > 0:
@@ -295,56 +243,56 @@ def crypto_coinpaprika(bot, trigger):
     """Get cryptocurrency price using Coinpaprika API."""
     # Coinpaprika: https://api.coinpaprika.com
     # Endpoint: GET https://api.coinpaprika.com/v1/search?q={query}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .crypto_coinpaprika <coin_name>')
         bot.notice(trigger.nick, 'Example: .crypto_coinpaprika bitcoin')
         return
-    
+
     coin = trigger.group(2).strip().lower()
     logger.info(f'Coinpaprika lookup: {coin}')
-    
+
     encoded_coin = http.quote(coin)
     search_url = f'https://api.coinpaprika.com/v1/search?q={encoded_coin}'
-    
+
     logger.debug(f'Searching Coinpaprika: {search_url}')
     search_data = http.get(search_url)
-    
+
     if not search_data or 'currencies' not in search_data or not search_data['currencies']:
         bot.notice(trigger.nick, f'Cryptocurrency "{coin}" not found.')
         return
-    
+
     # Get the first currency result
     currency = search_data['currencies'][0]
     coin_id = currency.get('id', '')
-    
+
     # Get ticker data
     ticker_url = f'https://api.coinpaprika.com/v1/tickers/{coin_id}'
     logger.debug(f'Fetching ticker: {ticker_url}')
     ticker_data = http.get(ticker_url)
-    
+
     if not ticker_data:
         bot.notice(trigger.nick, 'Failed to fetch price data.')
         return
-    
+
     name = ticker_data.get('name', 'Unknown')
     symbol = ticker_data.get('symbol', '').upper()
     quotes = ticker_data.get('quotes', {})
     usd_quote = quotes.get('USD', {})
-    
+
     price = usd_quote.get('price', 0)
     change_24h = usd_quote.get('percent_change_24h', 0)
     market_cap = usd_quote.get('market_cap', 0)
-    
+
     try:
         price_float = float(price)
         change_float = float(change_24h)
         market_cap_float = float(market_cap)
-        
+
         price_str = f"${price_float:,.2f}"
         change_str = f"{change_float:+.2f}%"
         change_formatted = formatter.bold(change_str) if change_float >= 0 else change_str
-        
+
         response = f"{formatter.bold(name)} {formatter.monospace(f'({symbol})')}: {formatter.bold(price_str)}"
         response += f" | 24h: {change_formatted}"
         if market_cap_float > 0:
@@ -362,54 +310,54 @@ def crypto_coinlore(bot, trigger):
     """Get cryptocurrency price using Coinlore API."""
     # Coinlore: https://www.coinlore.com/cryptocurrency-data-api
     # Endpoint: GET https://api.coinlore.com/api/coin/search/?q={query}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .crypto_coinlore <coin_name>')
         bot.notice(trigger.nick, 'Example: .crypto_coinlore bitcoin')
         return
-    
+
     coin = trigger.group(2).strip().lower()
     logger.info(f'Coinlore lookup: {coin}')
-    
+
     encoded_coin = http.quote(coin)
     search_url = f'https://api.coinlore.com/api/coin/search/?q={encoded_coin}'
-    
+
     logger.debug(f'Searching Coinlore: {search_url}')
     search_data = http.get(search_url)
-    
+
     if not search_data or not isinstance(search_data, list) or not search_data:
         bot.notice(trigger.nick, f'Cryptocurrency "{coin}" not found.')
         return
-    
+
     # Get the first result
     coin_data = search_data[0]
     coin_id = coin_data.get('id', '')
-    
+
     # Get ticker data using the coin ID
     ticker_url = f'https://api.coinlore.com/api/ticker/?id={coin_id}'
     logger.debug(f'Fetching ticker: {ticker_url}')
     ticker_data = http.get(ticker_url)
-    
+
     if not ticker_data or not isinstance(ticker_data, list) or not ticker_data:
         bot.notice(trigger.nick, 'Failed to fetch price data.')
         return
-    
+
     coin_info = ticker_data[0]
     name = coin_info.get('name', 'Unknown')
     symbol = coin_info.get('symbol', '').upper()
     price = coin_info.get('price_usd', '0')
     change_24h = coin_info.get('percent_change_24h', '0')
     market_cap = coin_info.get('market_cap_usd', '0')
-    
+
     try:
         price_float = float(price)
         change_float = float(change_24h)
         market_cap_float = float(market_cap)
-        
+
         price_str = f"${price_float:,.2f}"
         change_str = f"{change_float:+.2f}%"
         change_formatted = formatter.bold(change_str) if change_float >= 0 else change_str
-        
+
         response = f"{formatter.bold(name)} {formatter.monospace(f'({symbol})')}: {formatter.bold(price_str)}"
         response += f" | 24h: {change_formatted}"
         if market_cap_float > 0:
@@ -427,20 +375,20 @@ def crypto_cryptocompare(bot, trigger):
     """Get cryptocurrency price using CryptoCompare API."""
     # CryptoCompare: https://www.cryptocompare.com/api#
     # Endpoint: GET https://min-api.cryptocompare.com/data/price?fsym={symbol}&tsyms=USD
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .crypto_cryptocompare <coin_symbol>')
         bot.notice(trigger.nick, 'Example: .crypto_cryptocompare BTC')
         return
-    
+
     symbol = trigger.group(2).strip().upper()
     logger.info(f'CryptoCompare lookup: {symbol}')
-    
+
     url = f'https://min-api.cryptocompare.com/data/price?fsym={http.quote(symbol)}&tsyms=USD'
-    
+
     logger.debug(f'Fetching price: {url}')
     data = http.get(url)
-    
+
     if not data or 'USD' not in data:
         if 'Response' in data and data['Response'] == 'Error':
             error_msg = data.get('Message', 'Unknown error')
@@ -448,9 +396,9 @@ def crypto_cryptocompare(bot, trigger):
         else:
             bot.notice(trigger.nick, f'Failed to fetch price for {symbol}.')
         return
-    
+
     price = data.get('USD', 0)
-    
+
     try:
         price_float = float(price)
         price_str = f"${price_float:,.2f}"
@@ -466,24 +414,24 @@ def crypto_mempool(bot, trigger):
     """Get Bitcoin transaction fees using Mempool API."""
     # Mempool: https://mempool.space/api
     # Endpoint: GET https://mempool.space/api/v1/fees/recommended
-    
+
     logger.info('Mempool Bitcoin fees lookup')
-    
+
     url = 'https://mempool.space/api/v1/fees/recommended'
-    
+
     logger.debug(f'Fetching fees: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch Bitcoin fees.')
         return
-    
+
     fastest_fee = data.get('fastestFee', 0)
     half_hour_fee = data.get('halfHourFee', 0)
     hour_fee = data.get('hourFee', 0)
     economy_fee = data.get('economyFee', 0)
     minimum_fee = data.get('minimumFee', 0)
-    
+
     response = f"{formatter.bold('Bitcoin Fees')} (sat/vB):"
     bot.say(response)
     response = f"Fastest: {formatter.bold(str(fastest_fee))} | 30min: {formatter.monospace(str(half_hour_fee))} | 1hr: {formatter.monospace(str(hour_fee))}"
@@ -493,6 +441,7 @@ def crypto_mempool(bot, trigger):
 
 def setup(bot):
     """Module setup - Cryptocurrency APIs loaded."""
+    register_apis('cryptocurrency', APIS)
     bot.memory['cryptocurrency_loaded'] = True
     bot.memory['cryptocurrency_count'] = 15
     logger.info('Cryptocurrency module loaded')

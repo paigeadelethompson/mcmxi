@@ -3,13 +3,14 @@ Sopel module for Development APIs.
 Supports 52 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -385,59 +386,6 @@ APIS = [
 ]
 
 
-@plugin.command('development')
-@plugin.command('development')
-@plugin.example(f'.development')
-def development_list(bot, trigger):
-    """List all available Development APIs."""
-    bot.say(f'Available Development APIs (52):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .development_info <name> for details')
-
-
-@plugin.command('development_info')
-@plugin.example(f'.development_info <name>')
-def development_info(bot, trigger):
-    """Get information about a specific Development API."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .development_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.notice(trigger.nick, f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('development_search')
-@plugin.example(f'.development_search <query>')
-def development_search(bot, trigger):
-    """Search Development APIs by name or description."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .development_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 @plugin.command('age_agify')
@@ -447,21 +395,21 @@ def age_agify(bot, trigger):
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .age_agify <name>')
         return
-    
+
     name = trigger.group(2).strip()
     logger.info(f'Age lookup for: {name}')
-    
+
     encoded_name = http.quote(name)
     url = f'https://api.agify.io?name={encoded_name}'
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch age data. Please try again.')
         return
-    
+
     age = data.get('age', 'Unknown')
     count = data.get('count', 0)
-    
+
     response = f"Estimated age for {formatter.bold(name)}: {formatter.bold(str(age))} years"
     response += f" | Based on {formatter.monospace(f'{count:,}')} samples"
     bot.say(formatter.truncate(response, max_len=400))
@@ -472,30 +420,31 @@ def age_agify(bot, trigger):
 def trace_cloudflare(bot, trigger):
     """Get connection info using Cloudflare Trace API."""
     logger.info('Fetching trace info')
-    
+
     url = 'https://cloudflare-trace.com/'
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch trace data.')
         return
-    
+
     ip = data.get('ip', 'Unknown')
     country = data.get('country', 'Unknown')
     city = data.get('city', 'Unknown')
     http_version = data.get('httpVersion', 'Unknown')
     tls_version = data.get('tlsVersion', 'Unknown')
-    
+
     response = f"IP: {formatter.bold(ip)} | Location: {formatter.italic(f'{city}, {country}')}"
     response += f" | HTTP: {formatter.monospace(http_version)}"
     if tls_version != 'Unknown':
         response += f" | TLS: {formatter.monospace(tls_version)}"
-    
+
     bot.say(formatter.truncate(response, max_len=400))
 
 
 def setup(bot):
     """Module setup - Development APIs loaded."""
+    register_apis('development', APIS)
     bot.memory['development_loaded'] = True
     bot.memory['development_count'] = 52
     logger.info('Development module loaded')
@@ -513,39 +462,39 @@ def library_cdnjs(bot, trigger):
     """Search for JavaScript libraries on CDNJS."""
     # CDNJS: https://api.cdnjs.com/libraries
     # Endpoint: GET https://api.cdnjs.com/libraries?search={query}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .library_cdnjs <library_name>')
         bot.notice(trigger.nick, 'Example: .library_cdnjs jquery')
         return
-    
+
     query = trigger.group(2).strip()
-    
+
     logger.info(f'CDNJS library search: {query}')
-    
+
     encoded_query = http.quote(query)
     url = f'https://api.cdnjs.com/libraries?search={encoded_query}&fields=version,description,homepage'
-    
+
     logger.debug(f'Searching CDNJS: {url}')
     data = http.get(url)
-    
+
     if not data or 'results' not in data:
         bot.notice(trigger.nick, 'Failed to search CDNJS.')
         return
-    
+
     results = data.get('results', [])
-    
+
     if not results:
         bot.notice(trigger.nick, f'No libraries found for "{query}"')
         return
-    
+
     bot.say(f'Found {len(results)} library/libraries for "{query}" (showing {min(3, len(results))}):')
     for lib in results[:3]:
         name = lib.get('name', 'Unknown')
         version = lib.get('version', 'Unknown')
         description = lib.get('description', '')
         latest = lib.get('latest', '')
-        
+
         response = f"{formatter.bold(name)}"
         if version:
             response += f" v{formatter.monospace(version)}"
@@ -562,22 +511,22 @@ def status_digitalocean(bot, trigger):
     """Get DigitalOcean service status."""
     # DigitalOcean Status: https://status.digitalocean.com/api
     # Endpoint: GET https://status.digitalocean.com/api/v2/status.json
-    
+
     logger.info('DigitalOcean status check')
-    
+
     url = 'https://status.digitalocean.com/api/v2/status.json'
-    
+
     logger.debug(f'Fetching status: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch DigitalOcean status.')
         return
-    
+
     status = data.get('status', {})
     indicator = status.get('indicator', 'unknown')
     description = status.get('description', 'All Systems Operational')
-    
+
     # Map indicator to status
     status_map = {
         'none': 'Operational',
@@ -586,7 +535,7 @@ def status_digitalocean(bot, trigger):
         'critical': 'Critical Issues'
     }
     status_text = status_map.get(indicator, indicator)
-    
+
     response = f"{formatter.bold('DigitalOcean Status')}: {formatter.bold(status_text)}"
     response += f" | {formatter.italic(description)}"
     bot.say(formatter.truncate(response, max_len=400))
@@ -599,34 +548,34 @@ def networkcalc_ip(bot, trigger):
     """Calculate network information using NetworkCalc API."""
     # NetworkCalc: https://networkcalc.com/api/docs
     # Endpoint: GET https://networkcalc.com/api/ip/{ip_or_cidr}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .networkcalc_ip <ip_address> or <cidr>')
         bot.notice(trigger.nick, 'Examples: .networkcalc_ip 192.168.1.1')
         bot.notice(trigger.nick, '          .networkcalc_ip 192.168.1.0/24')
         return
-    
+
     ip_or_cidr = trigger.group(2).strip()
-    
+
     logger.info(f'NetworkCalc lookup: {ip_or_cidr}')
-    
+
     encoded_ip = http.quote(ip_or_cidr)
     url = f'https://networkcalc.com/api/ip/{encoded_ip}'
-    
+
     logger.debug(f'Calculating network: {url}')
     data = http.get(url)
-    
+
     if not data or 'address' not in data:
         bot.notice(trigger.nick, 'Failed to calculate network information.')
         return
-    
+
     address = data.get('address', {})
     cidr = address.get('cidr_notation', '')
     subnet_mask = address.get('subnet_mask', '')
     network = address.get('network_address', '')
     broadcast = address.get('broadcast_address', '')
     hosts = address.get('assignable_hosts', 0)
-    
+
     response = f"{formatter.bold('NetworkCalc')} {formatter.monospace(cidr)}"
     if subnet_mask:
         response += f" | Subnet: {formatter.monospace(subnet_mask)}"
@@ -636,7 +585,7 @@ def networkcalc_ip(bot, trigger):
         response += f" | Broadcast: {formatter.monospace(broadcast)}"
     if hosts is not None:
         response += f" | Hosts: {formatter.bold(str(hosts))}"
-    
+
     bot.say(formatter.truncate(response, max_len=400))
 
 
@@ -646,20 +595,20 @@ def qr_goqr(bot, trigger):
     """Generate QR code URL using goqr.me API."""
     # QR code (goqr.me): http://goqr.me/api/
     # Endpoint: GET https://api.qrserver.com/v1/create-qr-code/?size={size}&data={data}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .qr_goqr <data>')
         bot.notice(trigger.nick, 'Example: .qr_goqr https://example.com')
         return
-    
+
     data = trigger.group(2).strip()
-    
+
     logger.info(f'QR code generation: {data[:50]}')
-    
+
     encoded_data = http.quote(data)
     # Generate QR code URL (100x100 default size)
     qr_url = f'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={encoded_data}'
-    
+
     response = f"{formatter.bold('QR Code')} for {formatter.italic(data[:50])}:"
     bot.say(response)
     bot.say(f"{formatter.monospace(qr_url)}")
@@ -671,20 +620,20 @@ def ip_ipify(bot, trigger):
     """Get your public IP address using IPify API."""
     # IPify: https://www.ipify.org/
     # Endpoint: GET https://api.ipify.org?format=json
-    
+
     logger.info('IPify IP lookup')
-    
+
     url = 'https://api.ipify.org?format=json'
-    
+
     logger.debug(f'Fetching IP: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch IP address.')
         return
-    
+
     ip = data.get('ip', 'Unknown')
-    
+
     bot.say(f"Your IP: {formatter.bold(ip)}")
 
 
@@ -694,30 +643,30 @@ def gender_genderize(bot, trigger):
     """Estimate gender from a name using Genderize.io."""
     # Genderize.io: https://genderize.io
     # Endpoint: GET https://api.genderize.io?name={name}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .gender_genderize <name>')
         bot.notice(trigger.nick, 'Example: .gender_genderize john')
         return
-    
+
     name = trigger.group(2).strip()
-    
+
     logger.info(f'Genderize lookup for: {name}')
-    
+
     encoded_name = http.quote(name)
     url = f'https://api.genderize.io?name={encoded_name}'
-    
+
     logger.debug(f'Fetching gender: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch gender data.')
         return
-    
+
     gender = data.get('gender', 'unknown')
     probability = data.get('probability', 0.0)
     count = data.get('count', 0)
-    
+
     if gender:
         prob_pct = int(probability * 100)
         response = f"Name {formatter.bold(name)}: {formatter.bold(gender)}"
@@ -734,33 +683,33 @@ def nationality_nationalize(bot, trigger):
     """Estimate nationality from a name using Nationalize.io."""
     # Nationalize.io: https://nationalize.io
     # Endpoint: GET https://api.nationalize.io?name={name}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .nationality_nationalize <name>')
         bot.notice(trigger.nick, 'Example: .nationality_nationalize michael')
         return
-    
+
     name = trigger.group(2).strip()
-    
+
     logger.info(f'Nationalize lookup for: {name}')
-    
+
     encoded_name = http.quote(name)
     url = f'https://api.nationalize.io?name={encoded_name}'
-    
+
     logger.debug(f'Fetching nationality: {url}')
     data = http.get(url)
-    
+
     if not data or 'country' not in data:
         bot.notice(trigger.nick, 'Failed to fetch nationality data.')
         return
-    
+
     countries = data.get('country', [])
     count = data.get('count', 0)
-    
+
     if not countries:
         bot.say(f"Nationality for {formatter.bold(name)}: {formatter.italic('unknown')}")
         return
-    
+
     # Show top 3 countries
     top_countries = []
     for country in countries[:3]:
@@ -768,7 +717,7 @@ def nationality_nationalize(bot, trigger):
         prob = country.get('probability', 0.0)
         prob_pct = int(prob * 100)
         top_countries.append(f"{formatter.bold(country_id)} ({prob_pct}%)")
-    
+
     response = f"Name {formatter.bold(name)}: {', '.join(top_countries)}"
     response += f" | Based on {formatter.monospace(f'{count:,}')} samples"
     bot.say(formatter.truncate(response, max_len=400))
@@ -781,34 +730,34 @@ def package_npm(bot, trigger):
     """Query npm package information from npm Registry."""
     # npm Registry: https://github.com/npm/registry/blob/master/docs/REGISTRY-API.md
     # Endpoint: GET https://registry.npmjs.org/{package}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .package_npm <package_name>')
         bot.notice(trigger.nick, 'Example: .package_npm lodash')
         return
-    
+
     package_name = trigger.group(2).strip().lower()
-    
+
     logger.info(f'npm package lookup: {package_name}')
-    
+
     url = f'https://registry.npmjs.org/{http.quote(package_name)}'
-    
+
     logger.debug(f'Fetching package info: {url}')
     data = http.get(url)
-    
+
     if not data or 'name' not in data:
         bot.notice(trigger.nick, f'Package "{package_name}" not found.')
         return
-    
+
     name = data.get('name', package_name)
     dist_tags = data.get('dist-tags', {})
     latest_version = dist_tags.get('latest', 'Unknown')
     description = data.get('description', '')
-    
+
     # Get repository info
     repository = data.get('repository', {})
     repo_url = repository.get('url', '') if isinstance(repository, dict) else ''
-    
+
     response = f"{formatter.bold(name)}"
     response += f" v{formatter.monospace(latest_version)}"
     if description:
@@ -818,7 +767,7 @@ def package_npm(bot, trigger):
         clean_url = repo_url.replace('git+https://', 'https://').replace('git+ssh://', '').replace('.git', '')
         if clean_url:
             response += f" | {formatter.monospace(clean_url[:60])}"
-    
+
     bot.say(formatter.truncate(response, max_len=400))
 
 
@@ -829,7 +778,7 @@ def http_httpbin(bot, trigger):
     """Test HTTP endpoints using Httpbin.org."""
     # Httpbin: https://httpbin.org/
     # Endpoints: /get, /post, /ip, /headers, /user-agent, /status/{code}, etc.
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .http_httpbin <endpoint>')
         bot.notice(trigger.nick, 'Examples: .http_httpbin get')
@@ -837,27 +786,27 @@ def http_httpbin(bot, trigger):
         bot.notice(trigger.nick, '          .http_httpbin headers')
         bot.notice(trigger.nick, 'Available: get, post, ip, headers, user-agent')
         return
-    
+
     endpoint = trigger.group(2).strip().lower()
-    
+
     # Valid endpoints
     valid_endpoints = ['get', 'post', 'ip', 'headers', 'user-agent', 'status']
-    
+
     if endpoint not in valid_endpoints:
         bot.notice(trigger.nick, f'Invalid endpoint. Valid: {", ".join(valid_endpoints)}')
         return
-    
+
     logger.info(f'Httpbin request: {endpoint}')
-    
+
     url = f'https://httpbin.org/{endpoint}'
-    
+
     logger.debug(f'Testing endpoint: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, f'Failed to test endpoint: {endpoint}')
         return
-    
+
     if endpoint == 'ip':
         origin = data.get('origin', 'Unknown')
         bot.say(f"{formatter.bold('Httpbin IP')}: {formatter.monospace(origin)}")
@@ -867,7 +816,7 @@ def http_httpbin(bot, trigger):
     elif endpoint == 'headers':
         headers = data.get('headers', {})
         # Show a few key headers
-        key_headers = {k: v for k, v in list(headers.items())[:3]}
+        key_headers = dict(list(headers.items())[:3])
         headers_str = ', '.join([f"{k}: {v[:30]}" for k, v in key_headers.items()])
         bot.say(f"{formatter.bold('Httpbin Headers')}: {formatter.monospace(headers_str[:200])}")
     elif endpoint == 'get':

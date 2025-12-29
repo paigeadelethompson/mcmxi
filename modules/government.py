@@ -3,13 +3,14 @@ Sopel module for Government APIs.
 Supports 67 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -490,63 +491,14 @@ APIS = [
 ]
 
 
-@plugin.command('government')
-@plugin.command('government')
-@plugin.example(f'.government')
-def government_list(bot, trigger):
-    """List all available Government APIs."""
-    bot.say(f'Available Government APIs (67):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .government_info <name> for details')
 
 
-@plugin.command('government_info')
-@plugin.example(f'.government_info <name>')
-def government_info(bot, trigger):
-    """Get information about a specific Government API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .government_info <api_name>')
-        return
 
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('government_search')
-@plugin.example(f'.government_search <query>')
-def government_search(bot, trigger):
-    """Search Government APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .government_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 def setup(bot):
     """Module setup - Government APIs loaded."""
+    register_apis('government', APIS)
     bot.memory['government_loaded'] = True
     bot.memory['government_count'] = 67
 
@@ -562,24 +514,24 @@ def country_apicolombia(bot, trigger):
     """Get information about Colombia using Api Colombia."""
     # Api Colombia: https://api-colombia.com/
     # Endpoint: GET https://api-colombia.com/api/v1/Country/Colombia
-    
+
     logger.info('Api Colombia country lookup')
-    
+
     url = 'https://api-colombia.com/api/v1/Country/Colombia'
-    
+
     logger.debug(f'Fetching Colombia info: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, 'Failed to fetch Colombia information.')
         return
-    
+
     name = data.get('name', 'Colombia')
     description = data.get('description', '')
     population = data.get('population', 0)
     surface = data.get('surface', 0)
     time_zone = data.get('timeZone', '')
-    
+
     response = f"{formatter.bold(name)}"
     if population:
         response += f" | Population: {formatter.bold(f'{population:,}')}"
@@ -589,5 +541,5 @@ def country_apicolombia(bot, trigger):
         response += f" | Timezone: {formatter.monospace(time_zone)}"
     if description:
         response += f" | {formatter.italic(description[:100])}"
-    
+
     bot.say(formatter.truncate(response, max_len=400))

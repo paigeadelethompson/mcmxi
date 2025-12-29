@@ -3,13 +3,14 @@ Sopel module for Security APIs.
 Supports 12 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -107,10 +108,10 @@ APIS = [
 
 @plugin.command('security')
 @plugin.command('security')
-@plugin.example(f'.security')
+@plugin.example('.security')
 def security_list(bot, trigger):
     """List all available Security APIs."""
-    bot.say(f'Available Security APIs (12):')
+    bot.say('Available Security APIs (12):')
     for i, api in enumerate(APIS[:10], 1):  # Show first 10
         bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
     if len(APIS) > 10:
@@ -118,11 +119,11 @@ def security_list(bot, trigger):
 
 
 @plugin.command('security_info')
-@plugin.example(f'.security_info <name>')
+@plugin.example('.security_info <name>')
 def security_info(bot, trigger):
     """Get information about a specific Security API."""
     if not trigger.group(2):
-        bot.say(f'Usage: .security_info <api_name>')
+        bot.say('Usage: .security_info <api_name>')
         return
 
     search_name = trigger.group(2).strip().lower()
@@ -136,11 +137,11 @@ def security_info(bot, trigger):
 
 
 @plugin.command('security_search')
-@plugin.example(f'.security_search <query>')
+@plugin.example('.security_search <query>')
 def security_search(bot, trigger):
     """Search Security APIs by name or description."""
     if not trigger.group(2):
-        bot.say(f'Usage: .security_search <query>')
+        bot.say('Usage: .security_search <query>')
         return
 
     query = trigger.group(2).strip().lower()
@@ -162,6 +163,7 @@ def security_search(bot, trigger):
 
 def setup(bot):
     """Module setup - Security APIs loaded."""
+    register_apis('security', APIS)
     bot.memory['security_loaded'] = True
     bot.memory['security_count'] = 12
 
@@ -181,7 +183,7 @@ def password_passwordinator(bot, trigger):
     """Generate a random secure password using Passwordinator API (private message only)."""
     # Passwordinator: https://github.com/fawazsullia/password-generator/
     # Endpoint: GET https://passwordinator.herokuapp.com/generate?length={length}
-    
+
     length = 16  # default
     if trigger.group(2):
         try:
@@ -192,20 +194,20 @@ def password_passwordinator(bot, trigger):
         except ValueError:
             bot.notice(trigger.nick, 'Invalid length. Please provide a number.')
             return
-    
+
     logger.info(f'Generating password: length={length}')
-    
+
     url = f'https://passwordinator.herokuapp.com/generate?length={length}'
-    
+
     logger.debug(f'Generating password: {url}')
     data = http.get(url)
-    
+
     if not data or 'password' not in data:
         bot.notice(trigger.nick, 'Failed to generate password.')
         return
-    
+
     password = data.get('password', '')
-    
+
     bot.notice(trigger.nick, f'Generated password (length {length}): {formatter.monospace(password)}')
 
 
@@ -216,17 +218,17 @@ def cve_nvd(bot, trigger):
     """Search National Vulnerability Database (NVD) for CVE information."""
     # National Vulnerability Database: https://nvd.nist.gov/vuln/Data-Feeds/JSON-feed-changelog
     # Endpoint: GET https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch={query}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .cve_nvd <CVE_ID> or .cve_nvd search <keyword>')
         bot.notice(trigger.nick, 'Examples: .cve_nvd CVE-2024-0001')
         bot.notice(trigger.nick, '          .cve_nvd search python')
         return
-    
+
     query = trigger.group(2).strip()
-    
+
     logger.info(f'NVD CVE lookup: {query}')
-    
+
     # Check if it's a CVE ID (CVE-YYYY-NNNN) or a search term
     if query.upper().startswith('CVE-'):
         # Direct CVE lookup
@@ -239,29 +241,29 @@ def cve_nvd(bot, trigger):
     else:
         # Assume it's a keyword search
         url = f'https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch={http.quote(query)}&resultsPerPage=3'
-    
+
     logger.debug(f'Querying NVD: {url}')
     data = http.get(url)
-    
+
     if not data or 'vulnerabilities' not in data:
         bot.notice(trigger.nick, 'Failed to query NVD database.')
         return
-    
+
     vulnerabilities = data.get('vulnerabilities', [])
     total = data.get('totalResults', len(vulnerabilities))
-    
+
     if not vulnerabilities:
         bot.notice(trigger.nick, f'No CVEs found for "{query}".')
         return
-    
+
     bot.say(f'NVD - Found {total:,} CVE(s) (showing {len(vulnerabilities)}):')
-    
+
     for vuln in vulnerabilities[:3]:
         cve = vuln.get('cve', {})
         cve_id = cve.get('id', 'Unknown')
         descriptions = cve.get('descriptions', [])
         description = descriptions[0].get('value', 'Unknown') if descriptions else 'Unknown'
-        
+
         # Get CVSS score if available
         metrics = cve.get('metrics', {})
         cvss_score = None
@@ -277,14 +279,14 @@ def cve_nvd(bot, trigger):
         elif 'cvssMetricV2' in metrics:
             cvss_data = metrics['cvssMetricV2'][0].get('cvssData', {})
             cvss_score = cvss_data.get('baseScore')
-        
+
         response = f"{formatter.bold(cve_id)}"
         if cvss_score is not None:
             response += f" | CVSS: {formatter.monospace(str(cvss_score))}"
             if cvss_severity:
                 response += f" ({formatter.italic(cvss_severity)})"
         bot.say(formatter.truncate(response, max_len=400))
-        
+
         desc_short = description[:150] + '...' if len(description) > 150 else description
         bot.say(f"  {formatter.italic(desc_short)}")
 

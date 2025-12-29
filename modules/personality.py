@@ -3,13 +3,14 @@ Sopel module for Personality APIs.
 Supports 19 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -154,63 +155,14 @@ APIS = [
 ]
 
 
-@plugin.command('personality')
-@plugin.command('personality')
-@plugin.example(f'.personality')
-def personality_list(bot, trigger):
-    """List all available Personality APIs."""
-    bot.say(f'Available Personality APIs (19):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .personality_info <name> for details')
 
 
-@plugin.command('personality_info')
-@plugin.example(f'.personality_info <name>')
-def personality_info(bot, trigger):
-    """Get information about a specific Personality API."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .personality_info <api_name>')
-        return
 
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.say(f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('personality_search')
-@plugin.example(f'.personality_search <query>')
-def personality_search(bot, trigger):
-    """Search Personality APIs by name or description."""
-    if not trigger.group(2):
-        bot.say(f'Usage: .personality_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.say(f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
 
 
 def setup(bot):
     """Module setup - Personality APIs loaded."""
+    register_apis('personality', APIS)
     bot.memory['personality_loaded'] = True
     bot.memory['personality_count'] = 19
 
@@ -226,20 +178,20 @@ def quote_adviceslip(bot, trigger):
     """Get random advice from Advice Slip API."""
     # Advice Slip: http://api.adviceslip.com/
     # Endpoint: GET https://api.adviceslip.com/advice
-    
+
     logger.info('Advice Slip quote lookup')
-    
+
     url = 'https://api.adviceslip.com/advice'
-    
+
     logger.debug(f'Fetching advice: {url}')
     data = http.get(url)
-    
+
     if not data or 'slip' not in data:
         bot.notice(trigger.nick, 'Failed to fetch advice.')
         return
-    
+
     slip = data.get('slip', {})
     advice = slip.get('advice', '')
-    
+
     if advice:
         bot.say(f"{formatter.italic(advice)}")

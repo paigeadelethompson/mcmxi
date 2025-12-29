@@ -3,13 +3,14 @@ Sopel module for Calendar APIs.
 Supports 12 public APIs with no authentication required.
 """
 
-from sopel import plugin
-import json
-import sys
 import os
+import sys
+
+from sopel import plugin
+
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import get_module_logger, HTTPClient, IRCFormatter
+from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -107,10 +108,10 @@ APIS = [
 
 @plugin.command('calendar')
 @plugin.command('calendar')
-@plugin.example(f'.calendar')
+@plugin.example('.calendar')
 def calendar_list(bot, trigger):
     """List all available Calendar APIs."""
-    bot.say(f'Available Calendar APIs (12):')
+    bot.say('Available Calendar APIs (12):')
     for i, api in enumerate(APIS[:10], 1):  # Show first 10
         bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
     if len(APIS) > 10:
@@ -118,11 +119,11 @@ def calendar_list(bot, trigger):
 
 
 @plugin.command('calendar_info')
-@plugin.example(f'.calendar_info <name>')
+@plugin.example('.calendar_info <name>')
 def calendar_info(bot, trigger):
     """Get information about a specific Calendar API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .calendar_info <api_name>')
+        bot.notice(trigger.nick, 'Usage: .calendar_info <api_name>')
         return
 
     search_name = trigger.group(2).strip().lower()
@@ -136,11 +137,11 @@ def calendar_info(bot, trigger):
 
 
 @plugin.command('calendar_search')
-@plugin.example(f'.calendar_search <query>')
+@plugin.example('.calendar_search <query>')
 def calendar_search(bot, trigger):
     """Search Calendar APIs by name or description."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, f'Usage: .calendar_search <query>')
+        bot.notice(trigger.nick, 'Usage: .calendar_search <query>')
         return
 
     query = trigger.group(2).strip().lower()
@@ -170,36 +171,36 @@ def holiday_nager(bot, trigger):
         bot.notice(trigger.nick, 'Example: .holiday_nager US')
         bot.notice(trigger.nick, 'Example: .holiday_nager US 2024')
         return
-    
+
     parts = trigger.group(2).strip().upper().split()
     country_code = parts[0]
     year = parts[1] if len(parts) > 1 else None
-    
+
     if not year:
         from datetime import datetime
         year = datetime.now().year
-    
+
     logger.info(f'Holiday lookup: {country_code} {year}')
-    
+
     encoded_country = http.quote(country_code)
     url = f'https://date.nager.at/api/v3/PublicHolidays/{year}/{encoded_country}'
-    
+
     logger.debug(f'Fetching holidays: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, f'No holidays found for {country_code} in {year} or API error.')
         return
-    
+
     if not isinstance(data, list):
-        bot.notice(trigger.nick, f'Invalid response format.')
+        bot.notice(trigger.nick, 'Invalid response format.')
         return
-    
+
     # Get upcoming holidays (or all if none upcoming)
     from datetime import datetime
     today = datetime.now().date()
     upcoming = [h for h in data if datetime.strptime(h.get('date', ''), '%Y-%m-%d').date() >= today]
-    
+
     if not upcoming:
         # Show last few holidays if none upcoming
         holidays = sorted(data, key=lambda x: x.get('date', ''), reverse=True)[:3]
@@ -207,17 +208,17 @@ def holiday_nager(bot, trigger):
     else:
         holidays = sorted(upcoming, key=lambda x: x.get('date', ''))[:3]
         bot.say(f'Upcoming holidays for {country_code} in {year}:')
-    
+
     for holiday in holidays:
         date = holiday.get('date', '')
         name = holiday.get('name', 'Unknown')
         local_name = holiday.get('localName', '')
-        
+
         response = f"{formatter.bold(name)}"
         if local_name and local_name != name:
             response += f" {formatter.italic(f'({local_name})')}"
         response += f" | {formatter.monospace(date)}"
-        
+
         bot.say(formatter.truncate(response, max_len=400))
 
 
@@ -229,37 +230,37 @@ def holiday_uk(bot, trigger):
     # UK Bank Holidays: https://www.gov.uk/bank-holidays.json
     # Endpoint: GET https://www.gov.uk/bank-holidays.json
     # Divisions: england-and-wales, scotland, northern-ireland
-    
+
     division = trigger.group(2).strip().lower() if trigger.group(2) else 'england-and-wales'
-    
+
     valid_divisions = ['england-and-wales', 'scotland', 'northern-ireland']
     if division not in valid_divisions:
         bot.notice(trigger.nick, f'Invalid division. Valid: {", ".join(valid_divisions)}')
         return
-    
+
     logger.info(f'UK Bank Holidays lookup: {division}')
-    
+
     url = 'https://www.gov.uk/bank-holidays.json'
-    
+
     logger.debug(f'Fetching UK bank holidays: {url}')
     data = http.get(url)
-    
+
     if not data or division not in data:
         bot.notice(trigger.nick, 'Failed to fetch UK bank holidays.')
         return
-    
+
     division_data = data.get(division, {})
     events = division_data.get('events', [])
-    
+
     if not events:
         bot.notice(trigger.nick, f'No bank holidays found for {division}.')
         return
-    
+
     # Get upcoming holidays
     from datetime import datetime
     today = datetime.now().date()
     upcoming = [e for e in events if datetime.strptime(e.get('date', ''), '%Y-%m-%d').date() >= today]
-    
+
     if not upcoming:
         # Show last few if none upcoming
         holidays = sorted(events, key=lambda x: x.get('date', ''), reverse=True)[:3]
@@ -269,17 +270,17 @@ def holiday_uk(bot, trigger):
         holidays = sorted(upcoming, key=lambda x: x.get('date', ''))[:3]
         division_name = division.replace('-', ' ').title()
         bot.say(f'Upcoming UK Bank Holidays ({division_name}):')
-    
+
     for holiday in holidays:
         date = holiday.get('date', '')
         title = holiday.get('title', 'Unknown')
         notes = holiday.get('notes', '')
-        
+
         response = f"{formatter.bold(title)}"
         response += f" | {formatter.monospace(date)}"
         if notes:
             response += f" | {formatter.italic(notes)}"
-        
+
         bot.say(formatter.truncate(response, max_len=400))
 
 
@@ -290,43 +291,43 @@ def nameday_abalin(bot, trigger):
     """Get nameday information using Namedays Calendar API."""
     # Namedays Calendar: https://nameday.abalin.net
     # Endpoint: GET https://nameday.abalin.net/api/V1/getdate?name={name}&country={country}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .nameday_abalin <name> [country_code]')
         bot.notice(trigger.nick, 'Example: .nameday_abalin john')
         bot.notice(trigger.nick, 'Example: .nameday_abalin john us')
         return
-    
+
     parts = trigger.group(2).strip().split()
     name = parts[0].strip()
     country = parts[1].lower() if len(parts) > 1 else 'us'
-    
+
     logger.info(f'Nameday lookup: {name}, country: {country}')
-    
+
     encoded_name = http.quote(name)
     url = f'https://nameday.abalin.net/api/V1/getdate?name={encoded_name}&country={country}'
-    
+
     logger.debug(f'Fetching nameday: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, f'Failed to fetch nameday for "{name}".')
         return
-    
+
     # Check if it's an array or object
     if isinstance(data, list):
         if not data:
             bot.notice(trigger.nick, f'No nameday found for "{name}" in {country.upper()}.')
             return
         data = data[0]
-    
+
     day = data.get('day', '')
     month = data.get('month', '')
-    
+
     if not day or not month:
         bot.notice(trigger.nick, f'No nameday found for "{name}" in {country.upper()}.')
         return
-    
+
     response = f"{formatter.bold(name)}'s nameday ({country.upper()}): {formatter.monospace(f'{month}/{day}')}"
     bot.say(formatter.truncate(response, max_len=400))
 
@@ -338,36 +339,36 @@ def nameday_today(bot, trigger):
     """Get today's namedays using Namedays Calendar API."""
     # Namedays Calendar: https://nameday.abalin.net
     # Endpoint: GET https://nameday.abalin.net/api/V1/today?country={country}
-    
+
     country = trigger.group(2).strip().lower() if trigger.group(2) else 'us'
-    
+
     logger.info(f'Today\'s namedays lookup: {country}')
-    
+
     url = f'https://nameday.abalin.net/api/V1/today?country={country}'
-    
+
     logger.debug(f'Fetching today\'s namedays: {url}')
     data = http.get(url)
-    
+
     if not data:
         bot.notice(trigger.nick, f'Failed to fetch today\'s namedays for {country.upper()}.')
         return
-    
+
     # Check if it's an array or object
     if isinstance(data, list):
         if not data:
             bot.notice(trigger.nick, f'No namedays found for today in {country.upper()}.')
             return
         data = data[0]
-    
+
     namedays = data.get('nameday', {})
     names = []
-    
+
     # Handle different response formats
     if isinstance(namedays, dict):
         names = namedays.get(country, [])
         if not names:
             # Try other keys
-            for key in namedays.keys():
+            for key in namedays:
                 if isinstance(namedays[key], list):
                     names = namedays[key]
                     break
@@ -375,11 +376,11 @@ def nameday_today(bot, trigger):
         names = namedays
     elif isinstance(namedays, str):
         names = [namedays]
-    
+
     if not names:
         bot.notice(trigger.nick, f'No namedays found for today in {country.upper()}.')
         return
-    
+
     names_str = ', '.join(names[:5])  # Show first 5 names
     response = f"Today's namedays ({country.upper()}): {formatter.bold(names_str)}"
     if len(names) > 5:
@@ -394,44 +395,44 @@ def holiday_openholidays(bot, trigger):
     """Get public holidays using OpenHolidays API."""
     # OpenHolidays API: https://www.openholidaysapi.org/
     # Endpoint: GET https://www.openholidaysapi.org/PublicHolidays?countryIsoCode={code}&languageIsoCode={lang}&validFrom={from}&validTo={to}
-    
+
     if not trigger.group(2):
         bot.notice(trigger.nick, 'Usage: .holiday_openholidays <country_code> [year]')
         bot.notice(trigger.nick, 'Example: .holiday_openholidays US')
         bot.notice(trigger.nick, 'Example: .holiday_openholidays US 2024')
         return
-    
+
     parts = trigger.group(2).strip().upper().split()
     country_code = parts[0]
     year = parts[1] if len(parts) > 1 else None
-    
+
     if not year:
         from datetime import datetime
         year = datetime.now().year
-    
+
     logger.info(f'OpenHolidays lookup: {country_code} {year}')
-    
+
     valid_from = f'{year}-01-01'
     valid_to = f'{year}-12-31'
-    
+
     url = f'https://www.openholidaysapi.org/PublicHolidays?countryIsoCode={http.quote(country_code)}&languageIsoCode=EN&validFrom={valid_from}&validTo={valid_to}'
-    
+
     logger.debug(f'Fetching OpenHolidays: {url}')
     data = http.get(url)
-    
+
     if not data or not isinstance(data, list):
         bot.notice(trigger.nick, f'Failed to fetch holidays for {country_code} in {year}.')
         return
-    
+
     if not data:
         bot.notice(trigger.nick, f'No holidays found for {country_code} in {year}.')
         return
-    
+
     # Get upcoming holidays
     from datetime import datetime
     today = datetime.now().date()
     upcoming = [h for h in data if datetime.strptime(h.get('startDate', ''), '%Y-%m-%d').date() >= today]
-    
+
     if not upcoming:
         # Show last few if none upcoming
         holidays = sorted(data, key=lambda x: x.get('startDate', ''), reverse=True)[:3]
@@ -439,22 +440,23 @@ def holiday_openholidays(bot, trigger):
     else:
         holidays = sorted(upcoming, key=lambda x: x.get('startDate', ''))[:3]
         bot.say(f'Upcoming holidays for {country_code} in {year}:')
-    
+
     for holiday in holidays:
         start_date = holiday.get('startDate', '')
         name = holiday.get('name', [{}])[0].get('text', 'Unknown') if isinstance(holiday.get('name'), list) else holiday.get('name', 'Unknown')
         end_date = holiday.get('endDate', '')
-        
+
         response = f"{formatter.bold(name)}"
         response += f" | {formatter.monospace(start_date)}"
         if end_date and end_date != start_date:
             response += f" - {formatter.monospace(end_date)}"
-        
+
         bot.say(formatter.truncate(response, max_len=400))
 
 
 def setup(bot):
     """Module setup - Calendar APIs loaded."""
+    register_apis('calendar', APIS)
     bot.memory['calendar_loaded'] = True
     bot.memory['calendar_count'] = 12
     logger.info('Calendar module loaded')
