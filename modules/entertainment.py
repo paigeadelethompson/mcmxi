@@ -112,8 +112,8 @@ APIS = [
 
 
 @plugin.command('joke_jokeapi')
-@plugin.example('.joke_jokeapi')
-@plugin.example('.joke_jokeapi programming')
+@plugin.example('`joke_jokeapi')
+@plugin.example('`joke_jokeapi programming')
 def joke_jokeapi(bot, trigger):
     """Get a random joke using JokeAPI."""
     category = trigger.group(2).strip().lower() if trigger.group(2) else 'any'

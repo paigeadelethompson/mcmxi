@@ -114,7 +114,7 @@ def shutdown(bot):
 
 
 @plugin.command('currency_dolarapi')
-@plugin.example('.currency_dolarapi')
+@plugin.example('`currency_dolarapi')
 def currency_dolarapi(bot, trigger):
     """Get real-time exchange rates from DolarAPI for Latin American currencies."""
     # DolarAPI: https://dolarapi.com/docs/
@@ -155,15 +155,15 @@ def currency_dolarapi(bot, trigger):
 
 
 @plugin.command('bin_binlist')
-@plugin.example('.bin_binlist 45717360')
+@plugin.example('`bin_binlist 45717360')
 def bin_binlist(bot, trigger):
     """Look up IIN/BIN information for a credit/debit card number using Binlist API."""
     # Binlist: https://binlist.net/
     # Endpoint: GET https://lookup.binlist.net/{bin}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bin_binlist <first_6_digits>')
-        bot.notice(trigger.nick, 'Example: .bin_binlist 45717360')
+        bot.notice(trigger.nick, 'Usage: `bin_binlist <first_6_digits>')
+        bot.notice(trigger.nick, 'Example: `bin_binlist 45717360')
         return
 
     bin_number = trigger.group(2).strip()

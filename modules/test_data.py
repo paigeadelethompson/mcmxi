@@ -164,8 +164,8 @@ def shutdown(bot):
     bot.memory['test_data_loaded'] = False
 
 @plugin.command('lorem_baconipsum')
-@plugin.example('.lorem_baconipsum')
-@plugin.example('.lorem_baconipsum 3')
+@plugin.example('`lorem_baconipsum')
+@plugin.example('`lorem_baconipsum 3')
 def lorem_baconipsum(bot, trigger):
     """Generate bacon ipsum lorem text using Bacon Ipsum API."""
     # Bacon Ipsum: https://baconipsum.com/json-api/
@@ -199,8 +199,8 @@ def lorem_baconipsum(bot, trigger):
         bot.say(f"{i}. {formatter.italic(para_text)}...")
 
 @plugin.command('avatar_dicebear')
-@plugin.example('.avatar_dicebear')
-@plugin.example('.avatar_dicebear avataaars')
+@plugin.example('`avatar_dicebear')
+@plugin.example('`avatar_dicebear avataaars')
 def avatar_dicebear(bot, trigger):
     """Generate random pixel-art avatar URL using Dicebear Avatars."""
     # Dicebear Avatars: https://avatars.dicebear.com/

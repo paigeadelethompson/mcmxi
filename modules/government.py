@@ -509,7 +509,7 @@ def shutdown(bot):
 
 
 @plugin.command('country_apicolombia')
-@plugin.example('.country_apicolombia')
+@plugin.example('`country_apicolombia')
 def country_apicolombia(bot, trigger):
     """Get information about Colombia using Api Colombia."""
     # Api Colombia: https://api-colombia.com/

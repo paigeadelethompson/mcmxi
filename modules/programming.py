@@ -70,15 +70,15 @@ def shutdown(bot):
 
 
 @plugin.command('python_pythonium')
-@plugin.example('.python_pythonium print("hello")')
+@plugin.example('`python_pythonium print("hello")')
 def python_pythonium(bot, trigger):
     """Validate Python code syntax using Pythonium API."""
     # Pythonium: https://pythonium.net/linter
     # Endpoint: POST https://pythonium.net/api/v1/lint
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .python_pythonium <python_code>')
-        bot.notice(trigger.nick, 'Example: .python_pythonium print("hello")')
+        bot.notice(trigger.nick, 'Usage: `python_pythonium <python_code>')
+        bot.notice(trigger.nick, 'Example: `python_pythonium print("hello")')
         return
 
     code = trigger.group(2).strip()

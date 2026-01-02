@@ -10,7 +10,7 @@ from sopel import plugin
 
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
+from common import HTTPClient, get_command_prefix, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -45,22 +45,22 @@ APIS = [
 
 @plugin.command('jobs')
 @plugin.command('jobs')
-@plugin.example('.jobs')
+@plugin.example('`jobs')
 def jobs_list(bot, trigger):
     """List all available Jobs APIs."""
     bot.say('Available Jobs APIs (3):')
     for i, api in enumerate(APIS[:10], 1):  # Show first 10
         bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
     if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .jobs_info <name> for details')
+        bot.say(f'... and {len(APIS) - 10} more. Use {prefix}jobs_info <name> for details')
 
 
 @plugin.command('jobs_info')
-@plugin.example('.jobs_info <name>')
+@plugin.example('`jobs_info <name>')
 def jobs_info(bot, trigger):
     """Get information about a specific Jobs API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .jobs_info <api_name>')
+        bot.notice(trigger.nick, 'Usage: `jobs_info <api_name>')
         return
 
     search_name = trigger.group(2).strip().lower()
@@ -74,11 +74,11 @@ def jobs_info(bot, trigger):
 
 
 @plugin.command('jobs_search')
-@plugin.example('.jobs_search <query>')
+@plugin.example('`jobs_search <query>')
 def jobs_search(bot, trigger):
     """Search Jobs APIs by name or description."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .jobs_search <query>')
+        bot.notice(trigger.nick, 'Usage: `jobs_search <query>')
         return
 
     query = trigger.group(2).strip().lower()
@@ -99,13 +99,13 @@ def jobs_search(bot, trigger):
 
 
 @plugin.command('job_arbeitnow')
-@plugin.example('.job_arbeitnow python')
-@plugin.example('.job_arbeitnow remote')
+@plugin.example('`job_arbeitnow python')
+@plugin.example('`job_arbeitnow remote')
 def job_arbeitnow(bot, trigger):
     """Search for jobs using Arbeitnow API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .job_arbeitnow <keyword>')
-        bot.notice(trigger.nick, 'Example: .job_arbeitnow python')
+        bot.notice(trigger.nick, 'Usage: `job_arbeitnow <keyword>')
+        bot.notice(trigger.nick, 'Example: `job_arbeitnow python')
         return
 
     keyword = trigger.group(2).strip()

@@ -137,8 +137,8 @@ APIS = [
 
 
 @plugin.command('dog_dogceo')
-@plugin.example('.dog_dogceo')
-@plugin.example('.dog_dogceo hound')
+@plugin.example('`dog_dogceo')
+@plugin.example('`dog_dogceo hound')
 def dog_dogceo(bot, trigger):
     """Get random dog picture or by breed using Dog CEO API."""
     breed = trigger.group(2).strip().lower() if trigger.group(2) else None

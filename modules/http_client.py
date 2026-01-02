@@ -14,13 +14,33 @@ import urllib.error
 import urllib.request
 from collections import defaultdict
 from typing import Any, Dict, Optional
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from sopel.tools import get_logger
 
 # Import DNS resolution functions from DNS module
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from dns_module import resolve_hostname_dot, validate_ip_address
+from dns_module import resolve_hostname_dot
+
+
+def _validate_resolved_ip(ip: str) -> None:
+    """Validate that resolved IP is not private, reserved, multicast, etc. Raises ValueError if invalid."""
+    try:
+        addr = ipaddress.ip_address(ip)
+        if addr.is_multicast:
+            raise ValueError(f'IP {ip} is multicast address')
+        if addr.is_reserved:
+            raise ValueError(f'IP {ip} is reserved address')
+        if addr.is_private:
+            raise ValueError(f'IP {ip} is private address')
+        if addr.is_loopback:
+            raise ValueError(f'IP {ip} is loopback address')
+        if addr.is_link_local:
+            raise ValueError(f'IP {ip} is link-local address')
+    except ValueError:
+        raise  # Re-raise if it's our validation error
+    except Exception as e:
+        raise ValueError(f'Invalid IP address {ip}: {e}')
 
 
 class CustomHTTPSHandler(urllib.request.HTTPSHandler):
@@ -48,14 +68,19 @@ class CustomHTTPSHandler(urllib.request.HTTPSHandler):
         # Resolve hostname using DNS module
         try:
             ipaddress.ip_address(host_clean)
-            # Already an IP
+            # Already an IP - validate it
             resolved_ip = host_clean
-        except ValueError:
+            _validate_resolved_ip(resolved_ip)
+        except ValueError as e:
+            if 'is multicast' in str(e) or 'is reserved' in str(e) or 'is private' in str(e) or 'is loopback' in str(e) or 'is link-local' in str(e) or 'Invalid IP address' in str(e):
+                raise
             # Not an IP, resolve using DNS module
             self.logger.info(f'Resolving {host_clean} using DNS module')
             resolved_ip = resolve_hostname_dot(host_clean)
             if not resolved_ip:
                 raise ValueError(f'Failed to resolve {host_clean} using DNS module')
+            # Validate resolved IP
+            _validate_resolved_ip(resolved_ip)
             self.logger.info(f'Resolved {host_clean} to {resolved_ip}')
         
         self.logger.info(f'Connecting to {resolved_ip}:{port} (hostname: {self.tls_hostname})')
@@ -93,14 +118,19 @@ class CustomHTTPHandler(urllib.request.HTTPHandler):
         # Resolve hostname using DNS module
         try:
             ipaddress.ip_address(host_clean)
-            # Already an IP
+            # Already an IP - validate it
             resolved_ip = host_clean
-        except ValueError:
+            _validate_resolved_ip(resolved_ip)
+        except ValueError as e:
+            if 'is multicast' in str(e) or 'is reserved' in str(e) or 'is private' in str(e) or 'is loopback' in str(e) or 'is link-local' in str(e) or 'Invalid IP address' in str(e):
+                raise
             # Not an IP, resolve using DNS module
             self.logger.info(f'Resolving {host_clean} using DNS module')
             resolved_ip = resolve_hostname_dot(host_clean)
             if not resolved_ip:
                 raise ValueError(f'Failed to resolve {host_clean} using DNS module')
+            # Validate resolved IP
+            _validate_resolved_ip(resolved_ip)
             self.logger.info(f'Resolved {host_clean} to {resolved_ip}')
         
         self.logger.info(f'Connecting to {resolved_ip}:{port}')
@@ -122,6 +152,11 @@ class HTTPClient:
         self.retry_counts = defaultdict(int)
         self.cooldown_period = 1.0
         self.rate_limit = 10  # requests per minute per domain
+
+    @staticmethod
+    def quote(string: str, safe: str = '/') -> str:
+        """URL-encode a string. Wrapper around urllib.parse.quote."""
+        return quote(string, safe=safe)
 
     def _get_domain(self, url: str) -> str:
         """Extract domain from URL."""
@@ -163,9 +198,8 @@ class HTTPClient:
         # Check if already an IP
         try:
             ipaddress.ip_address(hostname)
-            is_valid, error_msg = validate_ip_address(hostname)
-            if not is_valid:
-                raise ValueError(f'Invalid IP address {hostname}: {error_msg}')
+            # Validate IP
+            _validate_resolved_ip(hostname)
             return hostname
         except ValueError:
             pass  # Not an IP, continue to DNS resolution
@@ -178,6 +212,9 @@ class HTTPClient:
         if not resolved_ip:
             self.logger.error(f'DNS resolution failed for {hostname} after {elapsed:.2f}s')
             raise ValueError(f'Failed to resolve {hostname} using DNS module')
+        
+        # Validate resolved IP
+        _validate_resolved_ip(resolved_ip)
         
         self.logger.info(f'DNS module resolved {hostname} to {resolved_ip} in {elapsed:.2f}s')
         return resolved_ip

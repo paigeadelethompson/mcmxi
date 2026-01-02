@@ -47,7 +47,7 @@ def apis_list_command(bot, trigger):
             bot.say('No API categories registered')
             return
         bot.say(f'Available API categories ({len(categories)}): {", ".join(categories)}')
-        bot.say('Use .apis <category> to list APIs in a category')
+        bot.say('Use {prefix}apis <category> to list APIs in a category')
         return
 
     category = trigger.group(2).strip().lower()
@@ -67,19 +67,19 @@ def apis_list_command(bot, trigger):
         desc = api.get('description', '')[:50]
         bot.say(f"{i}. {api.get('name', 'Unknown')} - {desc}")
     if len(apis) > max_show:
-        bot.say(f'... and {len(apis) - max_show} more. Use .api_info <category> <name> for details')
+        bot.say(f'... and {len(apis) - max_show} more. Use {prefix}api_info <category> <name> for details')
 
 
 def api_info_command(bot, trigger):
-    """Get information about a specific API. Usage: .api_info <category> <api_name>"""
+    """Get information about a specific API. Usage: `api_info <category> <api_name>"""
     api_registry = get_api_registry()
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .api_info <category> <api_name>')
+        bot.notice(trigger.nick, 'Usage: `api_info <category> <api_name>')
         return
 
     args = trigger.group(2).strip().split(None, 1)
     if len(args) < 2:
-        bot.notice(trigger.nick, 'Usage: .api_info <category> <api_name>')
+        bot.notice(trigger.nick, 'Usage: `api_info <category> <api_name>')
         return
 
     category = args[0].lower()
@@ -107,15 +107,15 @@ def api_info_command(bot, trigger):
 
 
 def api_search_command(bot, trigger):
-    """Search APIs by name or description. Usage: .api_search <category> <query>"""
+    """Search APIs by name or description. Usage: `api_search <category> <query>"""
     api_registry = get_api_registry()
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .api_search <category> <query>')
+        bot.notice(trigger.nick, 'Usage: `api_search <category> <query>')
         return
 
     args = trigger.group(2).strip().split(None, 1)
     if len(args) < 2:
-        bot.notice(trigger.nick, 'Usage: .api_search <category> <query>')
+        bot.notice(trigger.nick, 'Usage: `api_search <category> <query>')
         return
 
     category = args[0].lower()

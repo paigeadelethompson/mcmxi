@@ -45,15 +45,15 @@ def shutdown(bot):
     bot.memory['machine_learning_loaded'] = False
 
 @plugin.command('stem_exude')
-@plugin.example('.stem_exude running jumping')
+@plugin.example('`stem_exude running jumping')
 def stem_exude(bot, trigger):
     """Stem and filter words from text using EXUDE-API."""
     # EXUDE-API: http://uttesh.com/exude-api/
     # Endpoint: GET http://uttesh.com/exude-api/Stemming/{text}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .stem_exude <text>')
-        bot.notice(trigger.nick, 'Example: .stem_exude running jumping')
+        bot.notice(trigger.nick, 'Usage: `stem_exude <text>')
+        bot.notice(trigger.nick, 'Example: `stem_exude running jumping')
         return
 
     text = trigger.group(2).strip()

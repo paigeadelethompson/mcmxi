@@ -222,7 +222,7 @@ def shutdown(bot):
 
 
 @plugin.command('quote_breakingbad')
-@plugin.example('.quote_breakingbad')
+@plugin.example('`quote_breakingbad')
 def quote_breakingbad(bot, trigger):
     """Get a random Breaking Bad quote."""
     # Breaking Bad Quotes: https://github.com/shevabam/breaking-bad-quotes

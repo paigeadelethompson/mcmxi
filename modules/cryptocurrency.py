@@ -130,13 +130,13 @@ APIS = [
 
 
 @plugin.command('crypto_coingecko')
-@plugin.example('.crypto_coingecko bitcoin')
-@plugin.example('.crypto_coingecko ethereum')
+@plugin.example('`crypto_coingecko bitcoin')
+@plugin.example('`crypto_coingecko ethereum')
 def crypto_coingecko(bot, trigger):
     """Get cryptocurrency price using CoinGecko API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .crypto_coingecko <coin_name>')
-        bot.notice(trigger.nick, 'Example: .crypto_coingecko bitcoin')
+        bot.notice(trigger.nick, 'Usage: `crypto_coingecko <coin_name>')
+        bot.notice(trigger.nick, 'Example: `crypto_coingecko bitcoin')
         return
 
     coin = trigger.group(2).strip().lower()
@@ -184,16 +184,16 @@ def crypto_coingecko(bot, trigger):
 
 
 @plugin.command('crypto_coincap')
-@plugin.example('.crypto_coincap bitcoin')
-@plugin.example('.crypto_coincap ethereum')
+@plugin.example('`crypto_coincap bitcoin')
+@plugin.example('`crypto_coincap ethereum')
 def crypto_coincap(bot, trigger):
     """Get cryptocurrency price using CoinCap API."""
     # CoinCap: https://docs.coincap.io/
     # Endpoint: GET https://api.coincap.io/v2/assets?search={query}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .crypto_coincap <coin_name>')
-        bot.notice(trigger.nick, 'Example: .crypto_coincap bitcoin')
+        bot.notice(trigger.nick, 'Usage: `crypto_coincap <coin_name>')
+        bot.notice(trigger.nick, 'Example: `crypto_coincap bitcoin')
         return
 
     coin = trigger.group(2).strip().lower()
@@ -237,16 +237,16 @@ def crypto_coincap(bot, trigger):
 
 
 @plugin.command('crypto_coinpaprika')
-@plugin.example('.crypto_coinpaprika bitcoin')
-@plugin.example('.crypto_coinpaprika ethereum')
+@plugin.example('`crypto_coinpaprika bitcoin')
+@plugin.example('`crypto_coinpaprika ethereum')
 def crypto_coinpaprika(bot, trigger):
     """Get cryptocurrency price using Coinpaprika API."""
     # Coinpaprika: https://api.coinpaprika.com
     # Endpoint: GET https://api.coinpaprika.com/v1/search?q={query}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .crypto_coinpaprika <coin_name>')
-        bot.notice(trigger.nick, 'Example: .crypto_coinpaprika bitcoin')
+        bot.notice(trigger.nick, 'Usage: `crypto_coinpaprika <coin_name>')
+        bot.notice(trigger.nick, 'Example: `crypto_coinpaprika bitcoin')
         return
 
     coin = trigger.group(2).strip().lower()
@@ -304,16 +304,16 @@ def crypto_coinpaprika(bot, trigger):
 
 
 @plugin.command('crypto_coinlore')
-@plugin.example('.crypto_coinlore bitcoin')
-@plugin.example('.crypto_coinlore ethereum')
+@plugin.example('`crypto_coinlore bitcoin')
+@plugin.example('`crypto_coinlore ethereum')
 def crypto_coinlore(bot, trigger):
     """Get cryptocurrency price using Coinlore API."""
     # Coinlore: https://www.coinlore.com/cryptocurrency-data-api
     # Endpoint: GET https://api.coinlore.com/api/coin/search/?q={query}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .crypto_coinlore <coin_name>')
-        bot.notice(trigger.nick, 'Example: .crypto_coinlore bitcoin')
+        bot.notice(trigger.nick, 'Usage: `crypto_coinlore <coin_name>')
+        bot.notice(trigger.nick, 'Example: `crypto_coinlore bitcoin')
         return
 
     coin = trigger.group(2).strip().lower()
@@ -369,16 +369,16 @@ def crypto_coinlore(bot, trigger):
 
 
 @plugin.command('crypto_cryptocompare')
-@plugin.example('.crypto_cryptocompare BTC')
-@plugin.example('.crypto_cryptocompare ETH')
+@plugin.example('`crypto_cryptocompare BTC')
+@plugin.example('`crypto_cryptocompare ETH')
 def crypto_cryptocompare(bot, trigger):
     """Get cryptocurrency price using CryptoCompare API."""
     # CryptoCompare: https://www.cryptocompare.com/api#
     # Endpoint: GET https://min-api.cryptocompare.com/data/price?fsym={symbol}&tsyms=USD
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .crypto_cryptocompare <coin_symbol>')
-        bot.notice(trigger.nick, 'Example: .crypto_cryptocompare BTC')
+        bot.notice(trigger.nick, 'Usage: `crypto_cryptocompare <coin_symbol>')
+        bot.notice(trigger.nick, 'Example: `crypto_cryptocompare BTC')
         return
 
     symbol = trigger.group(2).strip().upper()
@@ -409,17 +409,12 @@ def crypto_cryptocompare(bot, trigger):
 
 
 @plugin.command('crypto_mempool')
-@plugin.example('.crypto_mempool')
+@plugin.example('`crypto_mempool')
 def crypto_mempool(bot, trigger):
     """Get Bitcoin transaction fees using Mempool API."""
-    # Mempool: https://mempool.space/api
-    # Endpoint: GET https://mempool.space/api/v1/fees/recommended
-
     logger.info('Mempool Bitcoin fees lookup')
 
     url = 'https://mempool.space/api/v1/fees/recommended'
-
-    logger.debug(f'Fetching fees: {url}')
     data = http.get(url)
 
     if not data:
@@ -432,11 +427,23 @@ def crypto_mempool(bot, trigger):
     economy_fee = data.get('economyFee', 0)
     minimum_fee = data.get('minimumFee', 0)
 
-    response = f"{formatter.bold('Bitcoin Fees')} (sat/vB):"
-    bot.say(response)
-    response = f"Fastest: {formatter.bold(str(fastest_fee))} | 30min: {formatter.monospace(str(half_hour_fee))} | 1hr: {formatter.monospace(str(hour_fee))}"
-    response += f" | Economy: {formatter.monospace(str(economy_fee))} | Min: {formatter.monospace(str(minimum_fee))}"
-    bot.say(formatter.truncate(response, max_len=400))
+    fee_data = {
+        'Fastest': fastest_fee,
+        '30min': half_hour_fee,
+        '1hr': hour_fee,
+        'Economy': economy_fee,
+        'Min': minimum_fee,
+    }
+
+    bot.say(f"{formatter.bold('Bitcoin Fees')} (sat/vB):")
+    chart = formatter.horizontal_bar(
+        list(fee_data.values()),
+        labels=list(fee_data.keys()),
+        width=30,
+        show_values=True
+    )
+    for line in chart.split('\n'):
+        bot.say(line)
 
 
 def setup(bot):

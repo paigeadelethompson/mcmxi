@@ -250,15 +250,15 @@ def shutdown(bot):
 
 
 @plugin.command('airport_airportsapi')
-@plugin.example('.airport_airportsapi KJFK')
+@plugin.example('`airport_airportsapi KJFK')
 def airport_airportsapi(bot, trigger):
     """Get airport information by ICAO code using airportsapi."""
     # airportsapi: https://airport-web.appspot.com/api/docs/
     # Endpoint: GET https://airport-web.appspot.com/api/airport/{icao}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .airport_airportsapi <ICAO_code>')
-        bot.notice(trigger.nick, 'Example: .airport_airportsapi KJFK')
+        bot.notice(trigger.nick, 'Usage: `airport_airportsapi <ICAO_code>')
+        bot.notice(trigger.nick, 'Example: `airport_airportsapi KJFK')
         return
 
     icao = trigger.group(2).strip().upper()

@@ -92,12 +92,12 @@ APIS = [
 ]
 
 @plugin.command('anime_jikan')
-@plugin.example('.anime_jikan naruto')
-@plugin.example('.anime_jikan 1')
+@plugin.example('`anime_jikan naruto')
+@plugin.example('`anime_jikan 1')
 def anime_jikan(bot, trigger):
     """Search for anime using Jikan (MyAnimeList) API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .anime_jikan <anime_name> or .anime_jikan <anime_id>')
+        bot.notice(trigger.nick, 'Usage: `anime_jikan <anime_name> or .anime_jikan <anime_id>')
         return
 
     query = trigger.group(2).strip()

@@ -87,9 +87,9 @@ def shutdown(bot):
     bot.memory['open_source_projects_loaded'] = False
 
 @plugin.command('word_datamuse')
-@plugin.example('.word_datamuse words like programming')
-@plugin.example('.word_datamuse rhymes with cat')
-@plugin.example('.word_datamuse means like happy')
+@plugin.example('`word_datamuse words like programming')
+@plugin.example('`word_datamuse rhymes with cat')
+@plugin.example('`word_datamuse means like happy')
 def word_datamuse(bot, trigger):
     """Search for words using Datamuse API (synonyms, rhymes, related words)."""
     # Datamuse: https://www.datamuse.com/api/
@@ -97,7 +97,7 @@ def word_datamuse(bot, trigger):
     # Supports: ml= (means like), sl= (sounds like), sp= (spelled like), rel_rhy= (rhymes with)
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .word_datamuse <query>')
+        bot.notice(trigger.nick, 'Usage: `word_datamuse <query>')
         bot.notice(trigger.nick, 'Examples: .word_datamuse words like programming')
         bot.notice(trigger.nick, '          .word_datamuse rhymes with cat')
         bot.notice(trigger.nick, '          .word_datamuse means like happy')

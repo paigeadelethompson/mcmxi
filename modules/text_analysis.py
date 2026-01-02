@@ -35,18 +35,18 @@ APIS = [
 ]
 
 @plugin.command('translate_libretranslate')
-@plugin.example('.translate_libretranslate Hello es')
-@plugin.example('.translate_libretranslate Bonjour en')
+@plugin.example('`translate_libretranslate Hello es')
+@plugin.example('`translate_libretranslate Bonjour en')
 def translate_libretranslate(bot, trigger):
     """Translate text using LibreTranslate API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .translate_libretranslate <text> <target_lang>')
-        bot.notice(trigger.nick, 'Example: .translate_libretranslate Hello es')
+        bot.notice(trigger.nick, 'Usage: `translate_libretranslate <text> <target_lang>')
+        bot.notice(trigger.nick, 'Example: `translate_libretranslate Hello es')
         return
 
     parts = trigger.group(2).strip().split(None, 1)
     if len(parts) < 2:
-        bot.notice(trigger.nick, 'Usage: .translate_libretranslate <text> <target_lang>')
+        bot.notice(trigger.nick, 'Usage: `translate_libretranslate <text> <target_lang>')
         bot.notice(trigger.nick, 'Supported languages: en, es, fr, de, it, pt, ru, ja, zh, etc.')
         return
 

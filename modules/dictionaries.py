@@ -56,12 +56,12 @@ APIS = [
 
 
 @plugin.command('dict_freedictionary')
-@plugin.example('.dict_freedictionary hello')
-@plugin.example('.dict_freedictionary computer')
+@plugin.example('`dict_freedictionary hello')
+@plugin.example('`dict_freedictionary computer')
 def dict_freedictionary(bot, trigger):
     """Look up word definition using Free Dictionary API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .dict_freedictionary <word>')
+        bot.notice(trigger.nick, 'Usage: `dict_freedictionary <word>')
         return
 
     word = trigger.group(2).strip()

@@ -113,12 +113,12 @@ APIS = [
 
 
 @plugin.command('emoji_emojihub')
-@plugin.example('.emoji_emojihub random')
-@plugin.example('.emoji_emojihub smileys_emotion')
+@plugin.example('`emoji_emojihub random')
+@plugin.example('`emoji_emojihub smileys_emotion')
 def emoji_emojihub(bot, trigger):
     """Get emojis by category using EmojiHub API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .emoji_emojihub <category> or .emoji_emojihub random')
+        bot.notice(trigger.nick, 'Usage: `emoji_emojihub <category> or .emoji_emojihub random')
         bot.notice(trigger.nick, 'Categories: smileys_emotion, people_body, animals_nature, food_drink, travel_places, activities, objects, symbols, flags')
         return
 

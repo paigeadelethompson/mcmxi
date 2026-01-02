@@ -10,7 +10,7 @@ from sopel import plugin
 
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import GraphQLClient, HTTPClient, IRCFormatter, get_module_logger, register_apis
+from common import GraphQLClient, get_command_prefix, HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -122,22 +122,22 @@ APIS = [
 
 @plugin.command('sports_fitness')
 @plugin.command('sportsfitness')
-@plugin.example('.sports_fitness')
+@plugin.example('`sports_fitness')
 def sports_fitness_list(bot, trigger):
     """List all available Sports & Fitness APIs."""
     bot.say('Available Sports & Fitness APIs (14):')
     for i, api in enumerate(APIS[:10], 1):  # Show first 10
         bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
     if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .sports_fitness_info <name> for details')
+        bot.say(f'... and {len(APIS) - 10} more. Use {prefix}sports_fitness_info <name> for details')
 
 
 @plugin.command('sports_fitness_info')
-@plugin.example('.sports_fitness_info <name>')
+@plugin.example('`sports_fitness_info <name>')
 def sports_fitness_info(bot, trigger):
     """Get information about a specific Sports & Fitness API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .sports_fitness_info <api_name>')
+        bot.notice(trigger.nick, 'Usage: `sports_fitness_info <api_name>')
         return
 
     search_name = trigger.group(2).strip().lower()
@@ -151,11 +151,11 @@ def sports_fitness_info(bot, trigger):
 
 
 @plugin.command('sports_fitness_search')
-@plugin.example('.sports_fitness_search <query>')
+@plugin.example('`sports_fitness_search <query>')
 def sports_fitness_search(bot, trigger):
     """Search Sports & Fitness APIs by name or description."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .sports_fitness_search <query>')
+        bot.notice(trigger.nick, 'Usage: `sports_fitness_search <query>')
         return
 
     query = trigger.group(2).strip().lower()
@@ -176,12 +176,12 @@ def sports_fitness_search(bot, trigger):
 
 
 @plugin.command('nba_balldontlie')
-@plugin.example('.nba_balldontlie lebron james')
-@plugin.example('.nba_balldontlie lakers')
+@plugin.example('`nba_balldontlie lebron james')
+@plugin.example('`nba_balldontlie lakers')
 def nba_balldontlie(bot, trigger):
     """Get NBA player or team stats using balldontlie API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .nba_balldontlie <player_name> or .nba_balldontlie <team_name>')
+        bot.notice(trigger.nick, 'Usage: `nba_balldontlie <player_name> or .nba_balldontlie <team_name>')
         return
 
     query = trigger.group(2).strip()
@@ -252,8 +252,8 @@ def shutdown(bot):
 
 
 @plugin.command('bikes_citybikes')
-@plugin.example('.bikes_citybikes paris')
-@plugin.example('.bikes_citybikes velib')
+@plugin.example('`bikes_citybikes paris')
+@plugin.example('`bikes_citybikes velib')
 def bikes_citybikes(bot, trigger):
     """Search for city bike networks using City Bikes API."""
     # City Bikes: https://api.citybik.es/v2/
@@ -261,7 +261,7 @@ def bikes_citybikes(bot, trigger):
     # Network: GET https://api.citybik.es/v2/networks/{network_id}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .bikes_citybikes <city_or_network_id>')
+        bot.notice(trigger.nick, 'Usage: `bikes_citybikes <city_or_network_id>')
         bot.notice(trigger.nick, 'Examples: .bikes_citybikes paris')
         bot.notice(trigger.nick, '          .bikes_citybikes velib')
         return
@@ -330,8 +330,8 @@ def bikes_citybikes(bot, trigger):
 
 
 @plugin.command('f1_driver')
-@plugin.example('.f1_driver 2023')
-@plugin.example('.f1_driver 2024')
+@plugin.example('`f1_driver 2023')
+@plugin.example('`f1_driver 2024')
 def f1_driver(bot, trigger):
     """Get F1 drivers for a year using F1 API."""
     # F1 API: https://f1api.dev
@@ -376,18 +376,18 @@ def f1_driver(bot, trigger):
 
 
 @plugin.command('nba_graphql')
-@plugin.example('.nba_graphql teams')
-@plugin.example('.nba_graphql players name:lebron')
-@plugin.example('.nba_graphql players team:lakers limit:10')
-@plugin.example('.nba_graphql player id:237')
-@plugin.example('.nba_graphql team name:lakers')
+@plugin.example('`nba_graphql teams')
+@plugin.example('`nba_graphql players name:lebron')
+@plugin.example('`nba_graphql players team:lakers limit:10')
+@plugin.example('`nba_graphql player id:237')
+@plugin.example('`nba_graphql team name:lakers')
 def nba_graphql(bot, trigger):
     """Query NBA data using NBA GraphQL API. Supports teams, players, and more."""
     # NBA GraphQL: https://nbaapi.com/graphql/
     # Endpoint: POST https://nbaapi.com/graphql/
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .nba_graphql <type> [options]')
+        bot.notice(trigger.nick, 'Usage: `nba_graphql <type> [options]')
         bot.notice(trigger.nick, 'Types: teams, players, player, team')
         bot.notice(trigger.nick, 'Examples: .nba_graphql teams')
         bot.notice(trigger.nick, '          .nba_graphql players name:lebron')
@@ -519,7 +519,7 @@ def nba_graphql(bot, trigger):
         # Query single player by ID
         player_id = options.get('id', '')
         if not player_id:
-            bot.notice(trigger.nick, 'Usage: .nba_graphql player id:<player_id>')
+            bot.notice(trigger.nick, 'Usage: `nba_graphql player id:<player_id>')
             return
 
         query = """
@@ -571,7 +571,7 @@ def nba_graphql(bot, trigger):
         team_id = options.get('id', '')
 
         if not team_name_filter and not team_id:
-            bot.notice(trigger.nick, 'Usage: .nba_graphql team name:<team_name> or .nba_graphql team id:<team_id>')
+            bot.notice(trigger.nick, 'Usage: `nba_graphql team name:<team_name> or .nba_graphql team id:<team_id>')
             return
 
         # First get all teams to find the one we want
@@ -624,7 +624,7 @@ def nba_graphql(bot, trigger):
 
 
 @plugin.command('football_openligadb')
-@plugin.example('.football_openligadb bl1')
+@plugin.example('`football_openligadb bl1')
 def football_openligadb(bot, trigger):
     """Get German Bundesliga match data using OpenLigaDB API."""
     # OpenLigaDB: https://www.openligadb.de

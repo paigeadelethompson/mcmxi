@@ -88,12 +88,12 @@ APIS = [
 
 
 @plugin.command('weather_openmeteo')
-@plugin.example('.weather_openmeteo 47.6062,-122.3321')
+@plugin.example('`weather_openmeteo 47.6062,-122.3321')
 def weather_openmeteo(bot, trigger):
     """Get current weather using Open-Meteo API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .weather_openmeteo <lat,lon>')
-        bot.notice(trigger.nick, 'Example: .weather_openmeteo 47.6062,-122.3321')
+        bot.notice(trigger.nick, 'Usage: `weather_openmeteo <lat,lon>')
+        bot.notice(trigger.nick, 'Example: `weather_openmeteo 47.6062,-122.3321')
         return
 
     query = trigger.group(2).strip()

@@ -197,12 +197,12 @@ APIS = [
 
 
 @plugin.command('arxiv')
-@plugin.example('.arxiv quantum')
-@plugin.example('.arxiv machine learning')
+@plugin.example('`arxiv quantum')
+@plugin.example('`arxiv machine learning')
 def arxiv_search(bot, trigger):
     """Search arXiv research papers."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .arxiv <search_query>')
+        bot.notice(trigger.nick, 'Usage: `arxiv <search_query>')
         return
 
     query = trigger.group(2).strip()

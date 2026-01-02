@@ -47,15 +47,15 @@ def shutdown(bot):
 
 
 @plugin.command('podcast_itunes')
-@plugin.example('.podcast_itunes python')
+@plugin.example('`podcast_itunes python')
 def podcast_itunes(bot, trigger):
     """Search for podcasts using iTunes/Apple Podcasts API."""
     # iTunes: https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/
     # Endpoint: GET https://itunes.apple.com/search?term={term}&media=podcast&limit=3
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .podcast_itunes <search_term>')
-        bot.notice(trigger.nick, 'Example: .podcast_itunes python')
+        bot.notice(trigger.nick, 'Usage: `podcast_itunes <search_term>')
+        bot.notice(trigger.nick, 'Example: `podcast_itunes python')
         return
 
     search_term = trigger.group(2).strip()

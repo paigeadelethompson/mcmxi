@@ -389,11 +389,11 @@ APIS = [
 
 
 @plugin.command('age_agify')
-@plugin.example('.age_agify John')
+@plugin.example('`age_agify John')
 def age_agify(bot, trigger):
     """Estimate age from a name using Agify.io."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .age_agify <name>')
+        bot.notice(trigger.nick, 'Usage: `age_agify <name>')
         return
 
     name = trigger.group(2).strip()
@@ -416,7 +416,7 @@ def age_agify(bot, trigger):
 
 
 @plugin.command('trace_cloudflare')
-@plugin.example('.trace_cloudflare')
+@plugin.example('`trace_cloudflare')
 def trace_cloudflare(bot, trigger):
     """Get connection info using Cloudflare Trace API."""
     logger.info('Fetching trace info')
@@ -457,15 +457,15 @@ def shutdown(bot):
 
 
 @plugin.command('library_cdnjs')
-@plugin.example('.library_cdnjs jquery')
+@plugin.example('`library_cdnjs jquery')
 def library_cdnjs(bot, trigger):
     """Search for JavaScript libraries on CDNJS."""
     # CDNJS: https://api.cdnjs.com/libraries
     # Endpoint: GET https://api.cdnjs.com/libraries?search={query}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .library_cdnjs <library_name>')
-        bot.notice(trigger.nick, 'Example: .library_cdnjs jquery')
+        bot.notice(trigger.nick, 'Usage: `library_cdnjs <library_name>')
+        bot.notice(trigger.nick, 'Example: `library_cdnjs jquery')
         return
 
     query = trigger.group(2).strip()
@@ -506,7 +506,7 @@ def library_cdnjs(bot, trigger):
 
 
 @plugin.command('status_digitalocean')
-@plugin.example('.status_digitalocean')
+@plugin.example('`status_digitalocean')
 def status_digitalocean(bot, trigger):
     """Get DigitalOcean service status."""
     # DigitalOcean Status: https://status.digitalocean.com/api
@@ -542,15 +542,15 @@ def status_digitalocean(bot, trigger):
 
 
 @plugin.command('networkcalc_ip')
-@plugin.example('.networkcalc_ip 192.168.1.1')
-@plugin.example('.networkcalc_ip 192.168.1.0/24')
+@plugin.example('`networkcalc_ip 192.168.1.1')
+@plugin.example('`networkcalc_ip 192.168.1.0/24')
 def networkcalc_ip(bot, trigger):
     """Calculate network information using NetworkCalc API."""
     # NetworkCalc: https://networkcalc.com/api/docs
     # Endpoint: GET https://networkcalc.com/api/ip/{ip_or_cidr}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .networkcalc_ip <ip_address> or <cidr>')
+        bot.notice(trigger.nick, 'Usage: `networkcalc_ip <ip_address> or <cidr>')
         bot.notice(trigger.nick, 'Examples: .networkcalc_ip 192.168.1.1')
         bot.notice(trigger.nick, '          .networkcalc_ip 192.168.1.0/24')
         return
@@ -590,15 +590,15 @@ def networkcalc_ip(bot, trigger):
 
 
 @plugin.command('qr_goqr')
-@plugin.example('.qr_goqr https://example.com')
+@plugin.example('`qr_goqr https://example.com')
 def qr_goqr(bot, trigger):
     """Generate QR code URL using goqr.me API."""
     # QR code (goqr.me): http://goqr.me/api/
     # Endpoint: GET https://api.qrserver.com/v1/create-qr-code/?size={size}&data={data}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .qr_goqr <data>')
-        bot.notice(trigger.nick, 'Example: .qr_goqr https://example.com')
+        bot.notice(trigger.nick, 'Usage: `qr_goqr <data>')
+        bot.notice(trigger.nick, 'Example: `qr_goqr https://example.com')
         return
 
     data = trigger.group(2).strip()
@@ -615,7 +615,7 @@ def qr_goqr(bot, trigger):
 
 
 @plugin.command('ip_ipify')
-@plugin.example('.ip_ipify')
+@plugin.example('`ip_ipify')
 def ip_ipify(bot, trigger):
     """Get your public IP address using IPify API."""
     # IPify: https://www.ipify.org/
@@ -638,15 +638,15 @@ def ip_ipify(bot, trigger):
 
 
 @plugin.command('gender_genderize')
-@plugin.example('.gender_genderize john')
+@plugin.example('`gender_genderize john')
 def gender_genderize(bot, trigger):
     """Estimate gender from a name using Genderize.io."""
     # Genderize.io: https://genderize.io
     # Endpoint: GET https://api.genderize.io?name={name}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .gender_genderize <name>')
-        bot.notice(trigger.nick, 'Example: .gender_genderize john')
+        bot.notice(trigger.nick, 'Usage: `gender_genderize <name>')
+        bot.notice(trigger.nick, 'Example: `gender_genderize john')
         return
 
     name = trigger.group(2).strip()
@@ -678,15 +678,15 @@ def gender_genderize(bot, trigger):
 
 
 @plugin.command('nationality_nationalize')
-@plugin.example('.nationality_nationalize michael')
+@plugin.example('`nationality_nationalize michael')
 def nationality_nationalize(bot, trigger):
     """Estimate nationality from a name using Nationalize.io."""
     # Nationalize.io: https://nationalize.io
     # Endpoint: GET https://api.nationalize.io?name={name}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .nationality_nationalize <name>')
-        bot.notice(trigger.nick, 'Example: .nationality_nationalize michael')
+        bot.notice(trigger.nick, 'Usage: `nationality_nationalize <name>')
+        bot.notice(trigger.nick, 'Example: `nationality_nationalize michael')
         return
 
     name = trigger.group(2).strip()
@@ -724,16 +724,16 @@ def nationality_nationalize(bot, trigger):
 
 
 @plugin.command('package_npm')
-@plugin.example('.package_npm lodash')
-@plugin.example('.package_npm express')
+@plugin.example('`package_npm lodash')
+@plugin.example('`package_npm express')
 def package_npm(bot, trigger):
     """Query npm package information from npm Registry."""
     # npm Registry: https://github.com/npm/registry/blob/master/docs/REGISTRY-API.md
     # Endpoint: GET https://registry.npmjs.org/{package}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .package_npm <package_name>')
-        bot.notice(trigger.nick, 'Example: .package_npm lodash')
+        bot.notice(trigger.nick, 'Usage: `package_npm <package_name>')
+        bot.notice(trigger.nick, 'Example: `package_npm lodash')
         return
 
     package_name = trigger.group(2).strip().lower()
@@ -772,15 +772,15 @@ def package_npm(bot, trigger):
 
 
 @plugin.command('http_httpbin')
-@plugin.example('.http_httpbin get')
-@plugin.example('.http_httpbin ip')
+@plugin.example('`http_httpbin get')
+@plugin.example('`http_httpbin ip')
 def http_httpbin(bot, trigger):
     """Test HTTP endpoints using Httpbin.org."""
     # Httpbin: https://httpbin.org/
     # Endpoints: /get, /post, /ip, /headers, /user-agent, /status/{code}, etc.
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .http_httpbin <endpoint>')
+        bot.notice(trigger.nick, 'Usage: `http_httpbin <endpoint>')
         bot.notice(trigger.nick, 'Examples: .http_httpbin get')
         bot.notice(trigger.nick, '          .http_httpbin ip')
         bot.notice(trigger.nick, '          .http_httpbin headers')

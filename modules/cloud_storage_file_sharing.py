@@ -52,7 +52,7 @@ def shutdown(bot):
     bot.memory['cloud_storage_file_sharing_loaded'] = False
 
 @plugin.command('file_0x0')
-@plugin.example('.file_0x0 https://example.com/file.txt')
+@plugin.example('`file_0x0 https://example.com/file.txt')
 def file_0x0(bot, trigger):
     """Get information about 0x0.st file hosting service."""
     # The Null Pointer: https://0x0.st

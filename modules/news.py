@@ -53,8 +53,8 @@ APIS = [
 
 
 @plugin.command('news_spaceflight')
-@plugin.example('.news_spaceflight')
-@plugin.example('.news_spaceflight 5')
+@plugin.example('`news_spaceflight')
+@plugin.example('`news_spaceflight 5')
 def news_spaceflight(bot, trigger):
     """Get spaceflight news using Spaceflight News API."""
     limit = 3
@@ -93,9 +93,9 @@ def news_spaceflight(bot, trigger):
 
 
 @plugin.command('news_inshorts')
-@plugin.example('.news_inshorts')
-@plugin.example('.news_inshorts technology')
-@plugin.example('.news_inshorts sports')
+@plugin.example('`news_inshorts')
+@plugin.example('`news_inshorts technology')
+@plugin.example('`news_inshorts sports')
 def news_inshorts(bot, trigger):
     """Get news from Inshorts API."""
     # Inshorts News: https://github.com/cyberboysumanjay/Inshorts-News-API
@@ -150,17 +150,17 @@ def news_inshorts(bot, trigger):
 
 
 @plugin.command('news_chronicling')
-@plugin.example('.news_chronicling bitcoin')
-@plugin.example('.news_chronicling "world war"')
+@plugin.example('`news_chronicling bitcoin')
+@plugin.example('`news_chronicling "world war"')
 def news_chronicling(bot, trigger):
     """Search historic US newspapers using Chronicling America API."""
     # Chronicling America: http://chroniclingamerica.loc.gov/about/api/
     # Endpoint: http://chroniclingamerica.loc.gov/search/pages/results/?format=json&q={query}&rows={limit}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .news_chronicling <search_query>')
-        bot.notice(trigger.nick, 'Example: .news_chronicling bitcoin')
-        bot.notice(trigger.nick, 'Example: .news_chronicling "world war"')
+        bot.notice(trigger.nick, 'Usage: `news_chronicling <search_query>')
+        bot.notice(trigger.nick, 'Example: `news_chronicling bitcoin')
+        bot.notice(trigger.nick, 'Example: `news_chronicling "world war"')
         return
 
     query = trigger.group(2).strip()
@@ -202,8 +202,8 @@ def news_chronicling(bot, trigger):
 
 
 @plugin.command('news_substack')
-@plugin.example('.news_substack')
-@plugin.example('.news_substack platformer')
+@plugin.example('`news_substack')
+@plugin.example('`news_substack platformer')
 def news_substack(bot, trigger):
     """Get latest posts from Substack newsletters using Substack API Wrapper."""
     # Substack API Wrapper: https://github.com/NHagar/substack_api
@@ -212,8 +212,8 @@ def news_substack(bot, trigger):
     publication = trigger.group(2).strip().lower() if trigger.group(2) else ''
 
     if not publication:
-        bot.notice(trigger.nick, 'Usage: .news_substack <publication_name>')
-        bot.notice(trigger.nick, 'Example: .news_substack platformer')
+        bot.notice(trigger.nick, 'Usage: `news_substack <publication_name>')
+        bot.notice(trigger.nick, 'Example: `news_substack platformer')
         bot.notice(trigger.nick, 'Note: Publication name is the Substack publication slug')
         return
 

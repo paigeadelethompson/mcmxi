@@ -63,15 +63,15 @@ def shutdown(bot):
 
 
 @plugin.command('calc_fastapi')
-@plugin.example('.calc_fastapi 2+2')
+@plugin.example('`calc_fastapi 2+2')
 def calc_fastapi(bot, trigger):
     """Perform calculations using FastApi Simple Calculator."""
     # FastApi Simple Calculator: https://fastapi-calculadora.onrender.com/
     # Endpoint: GET https://fastapi-calculadora.onrender.com/calculate?expression={expr}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .calc_fastapi <expression>')
-        bot.notice(trigger.nick, 'Example: .calc_fastapi 2+2')
+        bot.notice(trigger.nick, 'Usage: `calc_fastapi <expression>')
+        bot.notice(trigger.nick, 'Example: `calc_fastapi 2+2')
         return
 
     expression = trigger.group(2).strip()

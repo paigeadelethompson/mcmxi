@@ -113,17 +113,6 @@ DOH_PROVIDERS = {
 }
 
 
-def validate_ip_address(ip: str) -> Tuple[bool, str]:
-    """Validate an IP address. Returns (is_valid, error_msg)."""
-    try:
-        addr = ipaddress.ip_address(ip)
-        if addr.is_multicast or addr.is_reserved:
-            return False, "multicast or reserved address"
-        return True, ""
-    except ValueError as e:
-        return False, str(e)
-
-
 def _is_ipv6_available() -> bool:
     """Check if IPv6 is actually reachable on the system."""
     try:
@@ -296,14 +285,12 @@ def resolve_hostname_dot(hostname: str) -> Optional[str]:
                 if answer.get('type') == 28:  # AAAA record
                     ip = answer.get('data')
                     if ip:
-                        is_valid, _ = validate_ip_address(ip)
-                        if is_valid:
-                            elapsed = time.time() - start_time
-                            logger.info(
-                                f'Resolved {hostname} to IPv6 {ip} '
-                                f'in {elapsed:.2f}s'
-                            )
-                            return ip
+                        elapsed = time.time() - start_time
+                        logger.info(
+                            f'Resolved {hostname} to IPv6 {ip} '
+                            f'in {elapsed:.2f}s'
+                        )
+                        return ip
 
     # Use A (IPv4) - primary method
     logger.info(f'Querying A record for {hostname}')
@@ -313,14 +300,12 @@ def resolve_hostname_dot(hostname: str) -> Optional[str]:
             if answer.get('type') == 1:  # A record
                 ip = answer.get('data')
                 if ip:
-                    is_valid, _ = validate_ip_address(ip)
-                    if is_valid:
-                        elapsed = time.time() - start_time
-                        logger.info(
-                            f'Resolved {hostname} to IPv4 {ip} '
-                            f'in {elapsed:.2f}s'
-                        )
-                        return ip
+                    elapsed = time.time() - start_time
+                    logger.info(
+                        f'Resolved {hostname} to IPv4 {ip} '
+                        f'in {elapsed:.2f}s'
+                    )
+                    return ip
 
     elapsed = time.time() - start_time
     logger.warning(
@@ -421,11 +406,11 @@ def format_rdata(rdata: Any, record_type: str) -> str:
 
 
 @plugin.command('dns')
-@plugin.example('.dns example.com')
+@plugin.example('`dns example.com')
 def dns_query(bot, trigger):
-    """Query DNS records. Usage: .dns <domain> [record_type]"""
+    """Query DNS records. Usage: `dns <domain> [record_type]"""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .dns <domain> [record_type]')
+        bot.notice(trigger.nick, 'Usage: `dns <domain> [record_type]')
         return
 
     args = trigger.group(2).strip().split()
@@ -450,11 +435,11 @@ def dns_query(bot, trigger):
 
 
 @plugin.command('dns_doh')
-@plugin.example('.dns_doh example.com A')
+@plugin.example('`dns_doh example.com A')
 def dns_doh(bot, trigger):
-    """Query DNS over HTTPS. Usage: .dns_doh <domain> [record_type]"""
+    """Query DNS over HTTPS. Usage: `dns_doh <domain> [record_type]"""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .dns_doh <domain> [record_type]')
+        bot.notice(trigger.nick, 'Usage: `dns_doh <domain> [record_type]')
         return
 
     args = trigger.group(2).strip().split()

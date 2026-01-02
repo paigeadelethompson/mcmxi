@@ -84,7 +84,7 @@ APIS = [
 
 
 @plugin.command('carbon_ukcarbonintensity')
-@plugin.example('.carbon_ukcarbonintensity')
+@plugin.example('`carbon_ukcarbonintensity')
 def carbon_ukcarbonintensity(bot, trigger):
     """Get UK carbon intensity data using UK Carbon Intensity API."""
     logger.info('Fetching UK carbon intensity')

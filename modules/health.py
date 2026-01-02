@@ -168,8 +168,8 @@ APIS = [
 
 
 @plugin.command('covid_opendisease')
-@plugin.example('.covid_opendisease')
-@plugin.example('.covid_opendisease USA')
+@plugin.example('`covid_opendisease')
+@plugin.example('`covid_opendisease USA')
 def covid_opendisease(bot, trigger):
     """Get COVID-19 data using Open Disease API."""
     country = trigger.group(2).strip() if trigger.group(2) else 'all'

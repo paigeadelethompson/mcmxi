@@ -255,12 +255,12 @@ APIS = [
 
 
 @plugin.command('shorten_cleanuri')
-@plugin.example('.shorten_cleanuri https://example.com')
+@plugin.example('`shorten_cleanuri https://example.com')
 def shorten_cleanuri_cmd(bot, trigger):
     """Shorten URL using CleanURI API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .shorten_cleanuri <url>')
-        bot.notice(trigger.nick, 'Example: .shorten_cleanuri https://example.com')
+        bot.notice(trigger.nick, 'Usage: `shorten_cleanuri <url>')
+        bot.notice(trigger.nick, 'Example: `shorten_cleanuri https://example.com')
         return
 
     url = trigger.group(2).strip()
@@ -278,14 +278,14 @@ def shorten_cleanuri_cmd(bot, trigger):
 
 
 @plugin.command('shorten_spoo')
-@plugin.example('.shorten_spoo https://example.com')
-@plugin.example('.shorten_spoo https://example.com myalias')
+@plugin.example('`shorten_spoo https://example.com')
+@plugin.example('`shorten_spoo https://example.com myalias')
 def shorten_spoo_cmd(bot, trigger):
     """Shorten URL using Spoo.me API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .shorten_spoo <url> [alias]')
-        bot.notice(trigger.nick, 'Example: .shorten_spoo https://example.com')
-        bot.notice(trigger.nick, 'Example: .shorten_spoo https://example.com myalias')
+        bot.notice(trigger.nick, 'Usage: `shorten_spoo <url> [alias]')
+        bot.notice(trigger.nick, 'Example: `shorten_spoo https://example.com')
+        bot.notice(trigger.nick, 'Example: `shorten_spoo https://example.com myalias')
         return
 
     parts = trigger.group(2).strip().split(None, 1)
@@ -308,12 +308,12 @@ def shorten_spoo_cmd(bot, trigger):
 
 
 @plugin.command('shorten_isgd')
-@plugin.example('.shorten_isgd https://example.com')
+@plugin.example('`shorten_isgd https://example.com')
 def shorten_isgd_cmd(bot, trigger):
     """Shorten URL using is.gd API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .shorten_isgd <url>')
-        bot.notice(trigger.nick, 'Example: .shorten_isgd https://example.com')
+        bot.notice(trigger.nick, 'Usage: `shorten_isgd <url>')
+        bot.notice(trigger.nick, 'Example: `shorten_isgd https://example.com')
         return
 
     url = trigger.group(2).strip()
@@ -331,12 +331,12 @@ def shorten_isgd_cmd(bot, trigger):
 
 
 @plugin.command('shorten_vgd')
-@plugin.example('.shorten_vgd https://example.com')
+@plugin.example('`shorten_vgd https://example.com')
 def shorten_vgd_cmd(bot, trigger):
     """Shorten URL using v.gd API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .shorten_vgd <url>')
-        bot.notice(trigger.nick, 'Example: .shorten_vgd https://example.com')
+        bot.notice(trigger.nick, 'Usage: `shorten_vgd <url>')
+        bot.notice(trigger.nick, 'Example: `shorten_vgd https://example.com')
         return
 
     url = trigger.group(2).strip()
@@ -354,12 +354,12 @@ def shorten_vgd_cmd(bot, trigger):
 
 
 @plugin.command('shorten_tinyurl')
-@plugin.example('.shorten_tinyurl https://example.com')
+@plugin.example('`shorten_tinyurl https://example.com')
 def shorten_tinyurl_cmd(bot, trigger):
     """Shorten URL using TinyURL API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .shorten_tinyurl <url>')
-        bot.notice(trigger.nick, 'Example: .shorten_tinyurl https://example.com')
+        bot.notice(trigger.nick, 'Usage: `shorten_tinyurl <url>')
+        bot.notice(trigger.nick, 'Example: `shorten_tinyurl https://example.com')
         return
 
     url = trigger.group(2).strip()
@@ -377,14 +377,14 @@ def shorten_tinyurl_cmd(bot, trigger):
 
 
 @plugin.command('shorten_clcis')
-@plugin.example('.shorten_clcis https://example.com')
-@plugin.example('.shorten_clcis https://example.com myslug')
+@plugin.example('`shorten_clcis https://example.com')
+@plugin.example('`shorten_clcis https://example.com myslug')
 def shorten_clcis_cmd(bot, trigger):
     """Shorten URL using CLC.IS API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .shorten_clcis <url> [slug]')
-        bot.notice(trigger.nick, 'Example: .shorten_clcis https://example.com')
-        bot.notice(trigger.nick, 'Example: .shorten_clcis https://example.com myslug')
+        bot.notice(trigger.nick, 'Usage: `shorten_clcis <url> [slug]')
+        bot.notice(trigger.nick, 'Example: `shorten_clcis https://example.com')
+        bot.notice(trigger.nick, 'Example: `shorten_clcis https://example.com myslug')
         return
 
     parts = trigger.group(2).strip().split(None, 1)
@@ -407,12 +407,12 @@ def shorten_clcis_cmd(bot, trigger):
 
 
 @plugin.command('shorten_anycast')
-@plugin.example('.shorten_anycast https://example.com')
+@plugin.example('`shorten_anycast https://example.com')
 def shorten_anycast_cmd(bot, trigger):
     """Shorten URL using anycast (tries all services, returns first success)."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .shorten_anycast <url>')
-        bot.notice(trigger.nick, 'Example: .shorten_anycast https://example.com')
+        bot.notice(trigger.nick, 'Usage: `shorten_anycast <url>')
+        bot.notice(trigger.nick, 'Example: `shorten_anycast https://example.com')
         bot.notice(trigger.nick, 'Tries all services and returns the first successful result.')
         return
 
@@ -432,12 +432,12 @@ def shorten_anycast_cmd(bot, trigger):
 
 @plugin.command('shorten_rr')
 @plugin.command('shorten_roundrobin')
-@plugin.example('.shorten_rr https://example.com')
+@plugin.example('`shorten_rr https://example.com')
 def shorten_roundrobin_cmd(bot, trigger):
     """Shorten URL using round-robin (cycles through all services)."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .shorten_rr <url>')
-        bot.notice(trigger.nick, 'Example: .shorten_rr https://example.com')
+        bot.notice(trigger.nick, 'Usage: `shorten_rr <url>')
+        bot.notice(trigger.nick, 'Example: `shorten_rr https://example.com')
         bot.notice(trigger.nick, 'Cycles through all services for load balancing.')
         return
 
@@ -460,14 +460,14 @@ def shorten_roundrobin_cmd(bot, trigger):
 
 
 @plugin.command('shorten')
-@plugin.example('.shorten https://example.com')
-@plugin.example('.shorten https://example.com spoo')
+@plugin.example('`shorten https://example.com')
+@plugin.example('`shorten https://example.com spoo')
 def shorten(bot, trigger):
     """Shorten URL using available services (default: cleanuri)."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .shorten <url> [service]')
-        bot.notice(trigger.nick, 'Example: .shorten https://example.com')
-        bot.notice(trigger.nick, 'Example: .shorten https://example.com spoo')
+        bot.notice(trigger.nick, 'Usage: `shorten <url> [service]')
+        bot.notice(trigger.nick, 'Example: `shorten https://example.com')
+        bot.notice(trigger.nick, 'Example: `shorten https://example.com spoo')
         bot.notice(trigger.nick, 'Available services: cleanuri, spoo, isgd, vgd, tinyurl, clcis, anycast, roundrobin')
         return
 

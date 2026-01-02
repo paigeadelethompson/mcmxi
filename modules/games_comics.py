@@ -10,7 +10,7 @@ from sopel import plugin
 
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import GraphQLClient, HTTPClient, IRCFormatter, get_module_logger, register_apis
+from common import GraphQLClient, get_command_prefix, HTTPClient, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -444,22 +444,22 @@ APIS = [
 
 @plugin.command('games_comics')
 @plugin.command('gamescomics')
-@plugin.example('.games_comics')
+@plugin.example('`games_comics')
 def games_comics_list(bot, trigger):
     """List all available Games & Comics APIs."""
     bot.say('Available Games & Comics APIs (60):')
     for i, api in enumerate(APIS[:10], 1):  # Show first 10
         bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
     if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .games_comics_info <name> for details')
+        bot.say(f'... and {len(APIS) - 10} more. Use {prefix}games_comics_info <name> for details')
 
 
 @plugin.command('games_comics_info')
-@plugin.example('.games_comics_info <name>')
+@plugin.example('`games_comics_info <name>')
 def games_comics_info(bot, trigger):
     """Get information about a specific Games & Comics API."""
     if not trigger.group(2):
-        bot.say('Usage: .games_comics_info <api_name>')
+        bot.say('Usage: `games_comics_info <api_name>')
         return
 
     search_name = trigger.group(2).strip().lower()
@@ -473,11 +473,11 @@ def games_comics_info(bot, trigger):
 
 
 @plugin.command('games_comics_search')
-@plugin.example('.games_comics_search <query>')
+@plugin.example('`games_comics_search <query>')
 def games_comics_search(bot, trigger):
     """Search Games & Comics APIs by name or description."""
     if not trigger.group(2):
-        bot.say('Usage: .games_comics_search <query>')
+        bot.say('Usage: `games_comics_search <query>')
         return
 
     query = trigger.group(2).strip().lower()
@@ -498,12 +498,12 @@ def games_comics_search(bot, trigger):
 
 
 @plugin.command('pokemon_pokeapi')
-@plugin.example('.pokemon_pokeapi pikachu')
-@plugin.example('.pokemon_pokeapi 25')
+@plugin.example('`pokemon_pokeapi pikachu')
+@plugin.example('`pokemon_pokeapi 25')
 def pokemon_pokeapi(bot, trigger):
     """Get Pokémon information using PokéAPI."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .pokemon_pokeapi <name> or .pokemon_pokeapi <id>')
+        bot.notice(trigger.nick, 'Usage: `pokemon_pokeapi <name> or .pokemon_pokeapi <id>')
         return
 
     query = trigger.group(2).strip().lower()
@@ -533,17 +533,17 @@ def pokemon_pokeapi(bot, trigger):
 
 
 @plugin.command('pokemon_graphql')
-@plugin.example('.pokemon_graphql pokemon name:pikachu')
-@plugin.example('.pokemon_graphql pokemon id:25')
-@plugin.example('.pokemon_graphql pokemons generation:1 limit:5')
-@plugin.example('.pokemon_graphql type fire')
+@plugin.example('`pokemon_graphql pokemon name:pikachu')
+@plugin.example('`pokemon_graphql pokemon id:25')
+@plugin.example('`pokemon_graphql pokemons generation:1 limit:5')
+@plugin.example('`pokemon_graphql type fire')
 def pokemon_graphql(bot, trigger):
     """Query Pokemon data using GraphQL Pokemon API (favware)."""
     # GraphQL Pokemon: https://github.com/favware/graphql-pokemon
     # Endpoint: https://graphqlpokemon.favware.tech/
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .pokemon_graphql <type> [options]')
+        bot.notice(trigger.nick, 'Usage: `pokemon_graphql <type> [options]')
         bot.notice(trigger.nick, 'Types: pokemon, pokemons, type, types')
         bot.notice(trigger.nick, 'Examples: .pokemon_graphql pokemon name:pikachu')
         bot.notice(trigger.nick, '          .pokemon_graphql pokemon id:25')
@@ -579,7 +579,7 @@ def pokemon_graphql(bot, trigger):
         pokemon_name = options.get('name', '')
 
         if not pokemon_id and not pokemon_name:
-            bot.notice(trigger.nick, 'Usage: .pokemon_graphql pokemon name:<name> or id:<id>')
+            bot.notice(trigger.nick, 'Usage: `pokemon_graphql pokemon name:<name> or id:<id>')
             return
 
         identifier = pokemon_id if pokemon_id else pokemon_name.lower()
@@ -688,8 +688,8 @@ def pokemon_graphql(bot, trigger):
         # Get type information
         type_name = options.get('name', ' '.join(query_parts[1:])).lower() if len(query_parts) > 1 else ''
         if not type_name:
-            bot.notice(trigger.nick, 'Usage: .pokemon_graphql type <type_name>')
-            bot.notice(trigger.nick, 'Example: .pokemon_graphql type fire')
+            bot.notice(trigger.nick, 'Usage: `pokemon_graphql type <type_name>')
+            bot.notice(trigger.nick, 'Example: `pokemon_graphql type fire')
             return
 
         query = """
@@ -731,16 +731,16 @@ def pokemon_graphql(bot, trigger):
 
 
 @plugin.command('pokeapi_graphql')
-@plugin.example('.pokeapi_graphql pokemon name:pikachu')
-@plugin.example('.pokeapi_graphql pokemon id:25')
-@plugin.example('.pokeapi_graphql pokemons limit:10')
+@plugin.example('`pokeapi_graphql pokemon name:pikachu')
+@plugin.example('`pokeapi_graphql pokemon id:25')
+@plugin.example('`pokeapi_graphql pokemons limit:10')
 def pokeapi_graphql(bot, trigger):
     """Query Pokemon data using PokéAPI GraphQL (mazipan)."""
     # PokéAPI GraphQL: https://github.com/mazipan/graphql-pokeapi
     # Endpoint: https://beta.pokeapi.co/graphql/v1beta
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .pokeapi_graphql <type> [options]')
+        bot.notice(trigger.nick, 'Usage: `pokeapi_graphql <type> [options]')
         bot.notice(trigger.nick, 'Types: pokemon, pokemons')
         bot.notice(trigger.nick, 'Examples: .pokeapi_graphql pokemon name:pikachu')
         bot.notice(trigger.nick, '          .pokeapi_graphql pokemon id:25')
@@ -776,7 +776,7 @@ def pokeapi_graphql(bot, trigger):
         pokemon_name = options.get('name', '').lower()
 
         if not pokemon_id and not pokemon_name:
-            bot.notice(trigger.nick, 'Usage: .pokeapi_graphql pokemon name:<name> or id:<id>')
+            bot.notice(trigger.nick, 'Usage: `pokeapi_graphql pokemon name:<name> or id:<id>')
             return
 
         identifier = pokemon_id if pokemon_id else pokemon_name

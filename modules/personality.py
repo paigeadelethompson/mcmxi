@@ -173,7 +173,7 @@ def shutdown(bot):
 
 
 @plugin.command('quote_adviceslip')
-@plugin.example('.quote_adviceslip')
+@plugin.example('`quote_adviceslip')
 def quote_adviceslip(bot, trigger):
     """Get random advice from Advice Slip API."""
     # Advice Slip: http://api.adviceslip.com/

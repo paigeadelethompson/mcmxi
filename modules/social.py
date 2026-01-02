@@ -70,14 +70,15 @@ APIS = [
 
 
 @plugin.command('hn_hackernews')
-@plugin.example('.hn_hackernews')
-@plugin.example('.hn_hackernews 5')
+@plugin.example('`hn_hackernews')
+@plugin.example('`hn_hackernews 5')
 def hn_hackernews(bot, trigger):
     """Get top HackerNews stories using HackerNews API."""
     limit = 3
     if trigger.group(2):
         try:
-            limit = min(int(trigger.group(2).strip()), 5)  # Max 5 stories
+            requested_limit = int(trigger.group(2).strip())
+            limit = min(requested_limit, 30)  # Max 30 stories
         except ValueError:
             pass
 
@@ -128,14 +129,14 @@ def hn_hackernews(bot, trigger):
 
 
 @plugin.command('chan_4chan')
-@plugin.example('.chan_4chan b')
-@plugin.example('.chan_4chan b 1')
+@plugin.example('`chan_4chan b')
+@plugin.example('`chan_4chan b 1')
 def chan_4chan(bot, trigger):
     """Get 4chan threads using 4chan API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .chan_4chan <board> [page]')
-        bot.notice(trigger.nick, 'Example: .chan_4chan b')
-        bot.notice(trigger.nick, 'Example: .chan_4chan b 1')
+        bot.notice(trigger.nick, 'Usage: `chan_4chan <board> [page]')
+        bot.notice(trigger.nick, 'Example: `chan_4chan b')
+        bot.notice(trigger.nick, 'Example: `chan_4chan b 1')
         return
 
     parts = trigger.group(2).strip().split()
@@ -159,9 +160,21 @@ def chan_4chan(bot, trigger):
         bot.notice(trigger.nick, f'No threads found on /{board}/ page {page}.')
         return
 
-    # Get top 3 threads
-    top_threads = threads[:3]
-    bot.say(f'Top 3 threads on /{board}/ page {page}:')
+    # Show all threads (or up to 15 to avoid spam)
+    max_threads = 15
+    top_threads = threads[:max_threads]
+    total_threads = len(threads)
+    shown_count = len(top_threads)
+
+    if shown_count == total_threads:
+        count_text = f"All {shown_count} threads"
+    else:
+        count_text = f"Top {shown_count} of {total_threads} threads"
+
+    bot.say(
+        f"{formatter.bold(count_text)} on /{formatter.bold(board)}/ "
+        f"page {formatter.bold(str(page))}:"
+    )
 
     for i, thread_data in enumerate(top_threads, 1):
         posts = thread_data.get('posts', [])
@@ -180,20 +193,47 @@ def chan_4chan(bot, trigger):
             # Remove HTML tags and decode entities
             com = re.sub(r'<[^>]+>', '', com)
             com = unescape(com)
-            com = com.replace('\n', ' ').strip()[:100]
+            com = com.replace('\n', ' ').strip()[:150]
 
-        response = f"{i}. /{board}/#{no}"
+        # Build thread URL
+        thread_url = f"https://boards.4chan.org/{board}/thread/{no}"
+
+        # Format response
+        response_parts = [
+            f"{formatter.bold(f'{i}.')} /{board}/#{formatter.bold(no)}"
+        ]
+
         if sub:
-            response += f" | {formatter.bold(sub)}"
-        if com:
-            response += f" | {com}..."
-        response += f" | {replies} replies, {images} images"
+            response_parts.append(formatter.bold(sub))
 
+        if com:
+            response_parts.append(f"{formatter.italic(com)}...")
+
+        # Add stats with underlined numbers
+        stats = []
+        if replies > 0:
+            stats.append(
+                f"{formatter.underline(str(replies))} "
+                f"{'reply' if replies == 1 else 'replies'}"
+            )
+        if images > 0:
+            stats.append(
+                f"{formatter.underline(str(images))} "
+                f"{'image' if images == 1 else 'images'}"
+            )
+
+        if stats:
+            response_parts.append(' | '.join(stats))
+
+        # Add URL
+        response_parts.append(formatter.monospace(thread_url))
+
+        response = ' | '.join(response_parts)
         bot.say(formatter.truncate(response, max_len=400))
 
 
 @plugin.command('chan_boards')
-@plugin.example('.chan_boards')
+@plugin.example('`chan_boards')
 def chan_boards(bot, trigger):
     """List available 4chan boards."""
     logger.info('Fetching 4chan boards list')
@@ -220,12 +260,12 @@ def chan_boards(bot, trigger):
 
 
 @plugin.command('oc_opencollective')
-@plugin.example('.oc_opencollective webpack')
+@plugin.example('`oc_opencollective webpack')
 def oc_opencollective(bot, trigger):
     """Get Open Collective account information using Open Collective API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .oc_opencollective <slug>')
-        bot.notice(trigger.nick, 'Example: .oc_opencollective webpack')
+        bot.notice(trigger.nick, 'Usage: `oc_opencollective <slug>')
+        bot.notice(trigger.nick, 'Example: `oc_opencollective webpack')
         return
 
     slug = trigger.group(2).strip()

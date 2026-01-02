@@ -42,12 +42,12 @@ APIS = [
 
 
 @plugin.command('vin_nhtsa')
-@plugin.example('.vin_nhtsa 1HGBH41JXMN109186')
+@plugin.example('`vin_nhtsa 1HGBH41JXMN109186')
 def vin_nhtsa(bot, trigger):
     """Decode VIN using NHTSA API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .vin_nhtsa <VIN>')
-        bot.notice(trigger.nick, 'Example: .vin_nhtsa 1HGBH41JXMN109186')
+        bot.notice(trigger.nick, 'Usage: `vin_nhtsa <VIN>')
+        bot.notice(trigger.nick, 'Example: `vin_nhtsa 1HGBH41JXMN109186')
         return
 
     vin = trigger.group(2).strip().upper()

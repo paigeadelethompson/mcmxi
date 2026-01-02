@@ -53,15 +53,15 @@ def shutdown(bot):
     bot.memory['data_validation_loaded'] = False
 
 @plugin.command('filter_purgomalum')
-@plugin.example('.filter_purgomalum test text')
+@plugin.example('`filter_purgomalum test text')
 def filter_purgomalum(bot, trigger):
     """Check and filter text for profanity/obscenity using PurgoMalum API."""
     # PurgoMalum: http://www.purgomalum.com
     # Endpoint: GET http://www.purgomalum.com/service/json?text={text}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .filter_purgomalum <text>')
-        bot.notice(trigger.nick, 'Example: .filter_purgomalum test text')
+        bot.notice(trigger.nick, 'Usage: `filter_purgomalum <text>')
+        bot.notice(trigger.nick, 'Example: `filter_purgomalum test text')
         return
 
     text = trigger.group(2).strip()

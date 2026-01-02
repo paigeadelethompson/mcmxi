@@ -10,7 +10,7 @@ from sopel import plugin
 
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
+from common import HTTPClient, get_command_prefix, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -137,12 +137,12 @@ APIS = [
 
 
 @plugin.command('book_gutendex')
-@plugin.example('.book_gutendex moby dick')
-@plugin.example('.book_gutendex 2701')
+@plugin.example('`book_gutendex moby dick')
+@plugin.example('`book_gutendex 2701')
 def book_gutendex(bot, trigger):
     """Search for books using Gutendex (Project Gutenberg) API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .book_gutendex <title> or .book_gutendex <book_id>')
+        bot.notice(trigger.nick, 'Usage: `book_gutendex <title> or .book_gutendex <book_id>')
         return
 
     query = trigger.group(2).strip()
@@ -229,15 +229,15 @@ def shutdown(bot):
 
 
 @plugin.command('book_openlibrary')
-@plugin.example('.book_openlibrary python programming')
+@plugin.example('`book_openlibrary python programming')
 def book_openlibrary(bot, trigger):
     """Search for books using Open Library API."""
     # Open Library: https://openlibrary.org/developers/api
     # Endpoint: GET https://openlibrary.org/search.json?q={query}&limit=3
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .book_openlibrary <search_query>')
-        bot.notice(trigger.nick, 'Example: .book_openlibrary python programming')
+        bot.notice(trigger.nick, 'Usage: `book_openlibrary <search_query>')
+        bot.notice(trigger.nick, 'Example: `book_openlibrary python programming')
         return
 
     query = trigger.group(2).strip()
@@ -279,10 +279,10 @@ def book_openlibrary(bot, trigger):
 
 
 @plugin.command('verse_bibleapi')
-@plugin.example('.verse_bibleapi john 3:16')
-@plugin.example('.verse_bibleapi random')
-@plugin.example('.verse_bibleapi random JHN')
-@plugin.example('.verse_bibleapi books')
+@plugin.example('`verse_bibleapi john 3:16')
+@plugin.example('`verse_bibleapi random')
+@plugin.example('`verse_bibleapi random JHN')
+@plugin.example('`verse_bibleapi books')
 def verse_bibleapi(bot, trigger):
     """Get Bible verse using Bible-api.com. Supports random verses and book listing."""
     # Bible-api: https://bible-api.com/
@@ -293,7 +293,7 @@ def verse_bibleapi(bot, trigger):
     #   GET https://bible-api.com/data/web - list all books
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .verse_bibleapi <book> <chapter>:<verse> | random [book_id] | books')
+        bot.notice(trigger.nick, 'Usage: `verse_bibleapi <book> <chapter>:<verse> | random [book_id] | books')
         bot.notice(trigger.nick, 'Examples: .verse_bibleapi john 3:16')
         bot.notice(trigger.nick, '          .verse_bibleapi random')
         bot.notice(trigger.nick, '          .verse_bibleapi random JHN')
@@ -370,7 +370,7 @@ def verse_bibleapi(bot, trigger):
         bot.say(book_list)
 
         if len(books) > 15:
-            bot.say(f'... and {len(books) - 15} more books. Use .verse_bibleapi <book_id> <chapter>:<verse> for verses')
+            bot.say(f'... and {len(books) - 15} more books. Use {prefix}verse_bibleapi <book_id> <chapter>:<verse> for verses')
         return
 
     # Handle specific verse lookup
@@ -409,8 +409,8 @@ def verse_bibleapi(bot, trigger):
 
 
 @plugin.command('poem_poetrydb')
-@plugin.example('.poem_poetrydb author=emily+dickinson')
-@plugin.example('.poem_poetrydb title=hope')
+@plugin.example('`poem_poetrydb author=emily+dickinson')
+@plugin.example('`poem_poetrydb title=hope')
 def poem_poetrydb(bot, trigger):
     """Search for poems using PoetryDB API."""
     # PoetryDB: https://github.com/thundercomb/poetrydb#readme
@@ -418,7 +418,7 @@ def poem_poetrydb(bot, trigger):
     # Examples: /author/{author}, /title/{title}, /author,title/{author};{title}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .poem_poetrydb <query>')
+        bot.notice(trigger.nick, 'Usage: `poem_poetrydb <query>')
         bot.notice(trigger.nick, 'Examples: .poem_poetrydb author=emily+dickinson')
         bot.notice(trigger.nick, '          .poem_poetrydb title=hope')
         return
@@ -478,8 +478,8 @@ def poem_poetrydb(bot, trigger):
 
 
 @plugin.command('book_stephenking')
-@plugin.example('.book_stephenking')
-@plugin.example('.book_stephenking random')
+@plugin.example('`book_stephenking')
+@plugin.example('`book_stephenking random')
 def book_stephenking(bot, trigger):
     """Get Stephen King book information."""
     # Stephen King API: https://stephen-king-api.onrender.com/

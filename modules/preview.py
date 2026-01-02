@@ -13,28 +13,48 @@ from sopel import plugin
 
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import HTTPClient, IRCFormatter, OpenGraphExtractor, get_module_logger
+from common import HTTPClient, get_command_prefix, IRCFormatter, OpenGraphExtractor, get_module_logger, Permissions
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=2 * 1024 * 1024)  # 2MB for previews
 formatter = IRCFormatter()
 
 
-# URL whitelist - stored in bot memory
-# Format: [{'pattern': 'regex', 'enable_fields': ['og:field1', ...], 'disable_fields': ['og:field2', ...]}, ...]
-def get_whitelist(bot):
-    """Get URL whitelist entries from bot memory."""
-    if 'preview_whitelist' not in bot.memory:
-        bot.memory['preview_whitelist'] = []
-    return bot.memory['preview_whitelist']
+# Per-channel preview settings - stored in bot memory
+# Format: {'#channel': {'enabled': True/False, 'whitelist': [{'pattern': 'regex', ...}, ...]}, ...}
+def get_channel_settings(bot, channel: str) -> Dict[str, Any]:
+    """Get preview settings for a channel."""
+    if 'preview_channels' not in bot.memory:
+        bot.memory['preview_channels'] = {}
+    if channel not in bot.memory['preview_channels']:
+        bot.memory['preview_channels'][channel] = {
+            'enabled': False,
+            'whitelist': []
+        }
+    return bot.memory['preview_channels'][channel]
 
 
-def is_url_whitelisted(bot, url: str) -> Optional[Dict[str, Any]]:
+def is_preview_enabled(bot, channel: str) -> bool:
+    """Check if previews are enabled for a channel."""
+    settings = get_channel_settings(bot, channel)
+    return settings.get('enabled', False)
+
+
+def get_whitelist(bot, channel: str):
+    """Get URL whitelist entries for a channel."""
+    settings = get_channel_settings(bot, channel)
+    return settings.get('whitelist', [])
+
+
+def is_url_whitelisted(bot, channel: str, url: str) -> Optional[Dict[str, Any]]:
     """
-    Check if URL matches any whitelist pattern.
+    Check if URL matches any whitelist pattern for the channel.
     Returns the matching whitelist entry (with pattern, enable_fields, disable_fields) or None.
     """
-    whitelist = get_whitelist(bot)
+    if not is_preview_enabled(bot, channel):
+        return None
+    
+    whitelist = get_whitelist(bot, channel)
     try:
         for entry in whitelist:
             pattern = entry.get('pattern', '')
@@ -47,11 +67,12 @@ def is_url_whitelisted(bot, url: str) -> Optional[Dict[str, Any]]:
 
 @plugin.url(r'https?://[^\s]+')
 def preview_opengraph_handler(bot, trigger):
-    """Preview URL using OpenGraph metadata (only for whitelisted URLs)."""
+    """Preview URL using OpenGraph metadata (only for whitelisted URLs in enabled channels)."""
     url = trigger.group(0).strip()
+    channel = trigger.sender
 
-    # Only preview if whitelisted
-    whitelist_entry = is_url_whitelisted(bot, url)
+    # Only preview if channel has previews enabled and URL is whitelisted
+    whitelist_entry = is_url_whitelisted(bot, channel, url)
     if not whitelist_entry:
         return
 
@@ -215,6 +236,10 @@ def preview_opengraph(bot, trigger, url: str, domain: str, enable_fields: Option
 @plugin.url(r'https?://(?:www\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com|m\.youtube\.com)/.*')
 def preview_youtube(bot, trigger):
     """Preview YouTube video (regular, movies, music)."""
+    channel = trigger.sender
+    if not is_preview_enabled(bot, channel):
+        return
+
     url = trigger.group(0).strip()
 
     try:
@@ -279,6 +304,10 @@ def preview_youtube_impl(bot, trigger, url: str, domain: str):
 @plugin.url(r'https?://(?:www\.)?github\.com/.*')
 def preview_github(bot, trigger):
     """Preview GitHub repositories, issues, actions, and gists."""
+    channel = trigger.sender
+    if not is_preview_enabled(bot, channel):
+        return
+
     url = trigger.group(0).strip()
     logger.info(f'Extracting GitHub preview: {url}')
 
@@ -464,6 +493,10 @@ def preview_github_gist(bot, gist_id: str):
 @plugin.url(r'https?://(?:www\.)?gitlab\.com/.*')
 def preview_gitlab(bot, trigger):
     """Preview GitLab repositories, issues, and snippets."""
+    channel = trigger.sender
+    if not is_preview_enabled(bot, channel):
+        return
+
     url = trigger.group(0).strip()
     preview_gitlab_impl(bot, trigger, url)
 
@@ -582,6 +615,10 @@ def preview_gitlab_snippet(bot, project_path: str, snippet_id: str):
 @plugin.url(r'https?://(?:i\.)?imgur\.com/.*')
 def preview_imgur(bot, trigger):
     """Preview Imgur images and galleries."""
+    channel = trigger.sender
+    if not is_preview_enabled(bot, channel):
+        return
+
     url = trigger.group(0).strip()
     logger.info(f'Extracting Imgur preview: {url}')
 
@@ -615,6 +652,10 @@ def preview_imgur(bot, trigger):
 @plugin.url(r'https?://(?:www\.|old\.|np\.)?reddit\.com/.*')
 def preview_reddit(bot, trigger):
     """Preview Reddit posts and comments."""
+    channel = trigger.sender
+    if not is_preview_enabled(bot, channel):
+        return
+
     url = trigger.group(0).strip()
     logger.info(f'Extracting Reddit preview: {url}')
 
@@ -708,22 +749,58 @@ def preview_reddit_subreddit(bot, subreddit: str):
         logger.exception('Error fetching Reddit subreddit data', e)
 
 
-@plugin.command('preview_add')
-@plugin.require_privilege(plugin.OP, 'You must be a channel operator to manage preview whitelist.')
-def preview_add(bot, trigger):
-    """Add a regex pattern to the URL preview whitelist with optional field enable/disable.
-
-    Usage: .preview_add <regex_pattern> [+og:field1] [-og:field2] ...
-    Examples:
-      .preview_add https://example\\.com/.*
-      .preview_add https://news\\.com/.* +og:article:author -og:video
-      .preview_add https://video\\.com/.* +og:video +og:image -og:description
-    """
-    if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .preview_add <regex_pattern> [+og:field] [-og:field] ...')
-        bot.notice(trigger.nick, 'Example: .preview_add https://example\\.com/.* +og:image -og:video')
+@plugin.command('preview_enable')
+def preview_enable(bot, trigger):
+    """Enable URL previews for the current channel (admin only)."""
+    if not Permissions.is_admin(bot, trigger):
+        bot.notice(trigger.nick, 'Permission denied. Admin access required.')
         return
 
+    channel = trigger.sender
+    settings = get_channel_settings(bot, channel)
+    
+    if settings.get('enabled', False):
+        bot.notice(trigger.nick, f'Previews are already enabled for {channel}.')
+        return
+    
+    settings['enabled'] = True
+    bot.memory['preview_channels'][channel] = settings
+    bot.notice(trigger.nick, f'URL previews enabled for {channel}.')
+
+
+@plugin.command('preview_disable')
+def preview_disable(bot, trigger):
+    """Disable URL previews for the current channel (admin only)."""
+    if not Permissions.is_admin(bot, trigger):
+        bot.notice(trigger.nick, 'Permission denied. Admin access required.')
+        return
+
+    channel = trigger.sender
+    settings = get_channel_settings(bot, channel)
+    
+    if not settings.get('enabled', False):
+        bot.notice(trigger.nick, f'Previews are already disabled for {channel}.')
+        return
+    
+    settings['enabled'] = False
+    bot.memory['preview_channels'][channel] = settings
+    bot.notice(trigger.nick, f'URL previews disabled for {channel}.')
+
+
+@plugin.command('preview_add')
+def preview_add(bot, trigger):
+    """Add a regex pattern to the URL preview whitelist with optional field enable/disable (admin only)."""
+    if not Permissions.is_admin(bot, trigger):
+        bot.notice(trigger.nick, 'Permission denied. Admin access required.')
+        return
+
+    prefix = get_command_prefix(bot)
+    if not trigger.group(2):
+        bot.notice(trigger.nick, f'Usage: {prefix}preview_add <regex_pattern> [+og:field] [-og:field] ...')
+        bot.notice(trigger.nick, f'Example: {prefix}preview_add https://example\\.com/.* +og:image -og:video')
+        return
+
+    channel = trigger.sender
     args = trigger.group(2).strip().split()
     pattern = args[0]
     enable_fields = []
@@ -754,12 +831,13 @@ def preview_add(bot, trigger):
         bot.notice(trigger.nick, f'Invalid regex pattern: {e}')
         return
 
-    whitelist = get_whitelist(bot)
+    settings = get_channel_settings(bot, channel)
+    whitelist = settings.get('whitelist', [])
 
     # Check if pattern already exists
     for entry in whitelist:
         if entry.get('pattern') == pattern:
-            bot.notice(trigger.nick, f'Pattern "{pattern}" already in whitelist. Use .preview_remove first.')
+            bot.notice(trigger.nick, f'Pattern "{pattern}" already in whitelist. Use {prefix}preview_remove first.')
             return
 
     # Add new entry
@@ -769,9 +847,10 @@ def preview_add(bot, trigger):
         'disable_fields': disable_fields
     }
     whitelist.append(entry)
-    bot.memory['preview_whitelist'] = whitelist
+    settings['whitelist'] = whitelist
+    bot.memory['preview_channels'][channel] = settings
 
-    msg = f'Added "{pattern}" to preview whitelist'
+    msg = f'Added "{pattern}" to preview whitelist for {channel}'
     if enable_fields:
         msg += f' (enable: {", ".join(enable_fields)})'
     if disable_fields:
@@ -780,37 +859,50 @@ def preview_add(bot, trigger):
 
 
 @plugin.command('preview_remove')
-@plugin.require_privilege(plugin.OP, 'You must be a channel operator to manage preview whitelist.')
 def preview_remove(bot, trigger):
-    """Remove a regex pattern from the URL preview whitelist."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .preview_remove <regex_pattern>')
+    """Remove a regex pattern from the URL preview whitelist (admin only)."""
+    if not Permissions.is_admin(bot, trigger):
+        bot.notice(trigger.nick, 'Permission denied. Admin access required.')
         return
 
+    prefix = get_command_prefix(bot)
+    if not trigger.group(2):
+        bot.notice(trigger.nick, f'Usage: {prefix}preview_remove <regex_pattern>')
+        return
+
+    channel = trigger.sender
     pattern = trigger.group(2).strip()
-    whitelist = get_whitelist(bot)
+    settings = get_channel_settings(bot, channel)
+    whitelist = settings.get('whitelist', [])
 
     # Find and remove matching entry
     for i, entry in enumerate(whitelist):
         if entry.get('pattern') == pattern:
             whitelist.pop(i)
-            bot.memory['preview_whitelist'] = whitelist
-            bot.notice(trigger.nick, f'Removed "{pattern}" from preview whitelist.')
+            settings['whitelist'] = whitelist
+            bot.memory['preview_channels'][channel] = settings
+            bot.notice(trigger.nick, f'Removed "{pattern}" from preview whitelist for {channel}.')
             return
 
-    bot.notice(trigger.nick, f'Pattern "{pattern}" not found in whitelist.')
+    bot.notice(trigger.nick, f'Pattern "{pattern}" not found in whitelist for {channel}.')
 
 
 @plugin.command('preview_list')
-@plugin.require_privilege(plugin.OP, 'You must be a channel operator to view preview whitelist.')
 def preview_list(bot, trigger):
-    """List all regex patterns in the URL preview whitelist with their field settings."""
-    whitelist = get_whitelist(bot)
+    """List preview settings and whitelist patterns for the current channel."""
+    channel = trigger.sender
+    settings = get_channel_settings(bot, channel)
+    enabled = settings.get('enabled', False)
+    whitelist = settings.get('whitelist', [])
+
+    status = 'enabled' if enabled else 'disabled'
+    bot.notice(trigger.nick, f'Preview status for {channel}: {formatter.bold(status)}')
+    
     if not whitelist:
         bot.notice(trigger.nick, 'Preview whitelist is empty.')
         return
 
-    bot.notice(trigger.nick, 'Current preview whitelist patterns:')
+    bot.notice(trigger.nick, f'Current preview whitelist patterns for {channel}:')
     for i, entry in enumerate(whitelist, 1):
         pattern = entry.get('pattern', '')
         enable_fields = entry.get('enable_fields', [])
@@ -827,17 +919,10 @@ def preview_list(bot, trigger):
 def setup(bot):
     """Module setup - Preview module loaded."""
     bot.memory['preview_loaded'] = True
-    if 'preview_whitelist' not in bot.memory:
-        # Default whitelist for OpenGraph sites
-        bot.memory['preview_whitelist'] = [
-            {'pattern': r'https?://(?:www\.)?linkedin\.com/.*', 'enable_fields': [], 'disable_fields': []},
-            {'pattern': r'https?://(?:www\.)?(?:twitter\.com|x\.com)/.*', 'enable_fields': [], 'disable_fields': []},
-            {'pattern': r'https?://.*nitter.*/.*', 'enable_fields': [], 'disable_fields': []},
-            {'pattern': r'https?://(?:www\.)?(?:snort\.social|damus\.io|iris\.to|amethyst\.social|nostr\.band|nostr\.com|nostr\.directory|nostrview\.com|coracle\.social|nostrgram\.co|zap\.stream|nostr\.land|primal\.net|nostr\.watch|nostr\.pics|nostr\.io|nostr\.org|nostr\.link|nostr\.pub|nostr\.social|nostr\.network|nostr\.me|nostr\.app|nostr\.tools|nostr\.space|nostr\.zone|nostr\.dev|nostr\.tech|nostr\.online|nostr\.site|nostr\.live|nostr\.news|nostr\.media|nostr\.info|nostr\.net|nostr\.xyz|nostr\.museum|nostr\.cloud|nostr\.web|nostr\.tv|nostr\.ws|nostr\.email)/.*', 'enable_fields': [], 'disable_fields': []},
-            {'pattern': r'https?://(?:www\.)?nostr\..*/.*', 'enable_fields': [], 'disable_fields': []},
-            {'pattern': r'nostr:.*', 'enable_fields': [], 'disable_fields': []},
-        ]
-    logger.info('Preview module loaded')
+    if 'preview_channels' not in bot.memory:
+        # No default channels - previews must be enabled per channel
+        bot.memory['preview_channels'] = {}
+    logger.info('Preview module loaded (disabled by default, enable per channel)')
 
 
 def shutdown(bot):

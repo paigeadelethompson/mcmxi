@@ -106,70 +106,15 @@ APIS = [
 ]
 
 
-@plugin.command('calendar')
-@plugin.command('calendar')
-@plugin.example('.calendar')
-def calendar_list(bot, trigger):
-    """List all available Calendar APIs."""
-    bot.say('Available Calendar APIs (12):')
-    for i, api in enumerate(APIS[:10], 1):  # Show first 10
-        bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
-    if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .calendar_info <name> for details')
-
-
-@plugin.command('calendar_info')
-@plugin.example('.calendar_info <name>')
-def calendar_info(bot, trigger):
-    """Get information about a specific Calendar API."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .calendar_info <api_name>')
-        return
-
-    search_name = trigger.group(2).strip().lower()
-    for api in APIS:
-        if search_name in api['name'].lower():
-            bot.say(f"{api['name']}: {api['description']}")
-            bot.say(f"Link: {api['link']} | HTTPS: {api['https']} | CORS: {api['cors']}")
-            return
-
-    bot.notice(trigger.nick, f'API not found: {trigger.group(2)}')
-
-
-@plugin.command('calendar_search')
-@plugin.example('.calendar_search <query>')
-def calendar_search(bot, trigger):
-    """Search Calendar APIs by name or description."""
-    if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .calendar_search <query>')
-        return
-
-    query = trigger.group(2).strip().lower()
-    results = []
-    for api in APIS:
-        if (query in api['name'].lower() or query in api['description'].lower()):
-            results.append(api)
-
-    if not results:
-        bot.notice(trigger.nick, f'No APIs found matching: {trigger.group(2)}')
-        return
-
-    bot.say(f'Found {len(results)} API(s):')
-    for api in results[:5]:  # Show first 5 results
-        bot.say(f"- {api['name']}: {api['description'][:60]}")
-    if len(results) > 5:
-        bot.say(f'... and {len(results) - 5} more results')
-
-
 @plugin.command('holiday_nager')
-@plugin.example('.holiday_nager US')
-@plugin.example('.holiday_nager US 2024')
+@plugin.example('`holiday_nager US')
+@plugin.example('`holiday_nager US 2024')
 def holiday_nager(bot, trigger):
     """Get public holidays using Nager.Date API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .holiday_nager <country_code> [year]')
-        bot.notice(trigger.nick, 'Example: .holiday_nager US')
-        bot.notice(trigger.nick, 'Example: .holiday_nager US 2024')
+        bot.notice(trigger.nick, 'Usage: `holiday_nager <country_code> [year]')
+        bot.notice(trigger.nick, 'Example: `holiday_nager US')
+        bot.notice(trigger.nick, 'Example: `holiday_nager US 2024')
         return
 
     parts = trigger.group(2).strip().upper().split()
@@ -223,8 +168,8 @@ def holiday_nager(bot, trigger):
 
 
 @plugin.command('holiday_uk')
-@plugin.example('.holiday_uk')
-@plugin.example('.holiday_uk england-and-wales')
+@plugin.example('`holiday_uk')
+@plugin.example('`holiday_uk england-and-wales')
 def holiday_uk(bot, trigger):
     """Get UK Bank Holidays using UK Bank Holidays API."""
     # UK Bank Holidays: https://www.gov.uk/bank-holidays.json
@@ -285,17 +230,17 @@ def holiday_uk(bot, trigger):
 
 
 @plugin.command('nameday_abalin')
-@plugin.example('.nameday_abalin john')
-@plugin.example('.nameday_abalin john us')
+@plugin.example('`nameday_abalin john')
+@plugin.example('`nameday_abalin john us')
 def nameday_abalin(bot, trigger):
     """Get nameday information using Namedays Calendar API."""
     # Namedays Calendar: https://nameday.abalin.net
     # Endpoint: GET https://nameday.abalin.net/api/V1/getdate?name={name}&country={country}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .nameday_abalin <name> [country_code]')
-        bot.notice(trigger.nick, 'Example: .nameday_abalin john')
-        bot.notice(trigger.nick, 'Example: .nameday_abalin john us')
+        bot.notice(trigger.nick, 'Usage: `nameday_abalin <name> [country_code]')
+        bot.notice(trigger.nick, 'Example: `nameday_abalin john')
+        bot.notice(trigger.nick, 'Example: `nameday_abalin john us')
         return
 
     parts = trigger.group(2).strip().split()
@@ -333,8 +278,8 @@ def nameday_abalin(bot, trigger):
 
 
 @plugin.command('nameday_today')
-@plugin.example('.nameday_today')
-@plugin.example('.nameday_today us')
+@plugin.example('`nameday_today')
+@plugin.example('`nameday_today us')
 def nameday_today(bot, trigger):
     """Get today's namedays using Namedays Calendar API."""
     # Namedays Calendar: https://nameday.abalin.net
@@ -389,17 +334,17 @@ def nameday_today(bot, trigger):
 
 
 @plugin.command('holiday_openholidays')
-@plugin.example('.holiday_openholidays US')
-@plugin.example('.holiday_openholidays US 2024')
+@plugin.example('`holiday_openholidays US')
+@plugin.example('`holiday_openholidays US 2024')
 def holiday_openholidays(bot, trigger):
     """Get public holidays using OpenHolidays API."""
     # OpenHolidays API: https://www.openholidaysapi.org/
     # Endpoint: GET https://www.openholidaysapi.org/PublicHolidays?countryIsoCode={code}&languageIsoCode={lang}&validFrom={from}&validTo={to}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .holiday_openholidays <country_code> [year]')
-        bot.notice(trigger.nick, 'Example: .holiday_openholidays US')
-        bot.notice(trigger.nick, 'Example: .holiday_openholidays US 2024')
+        bot.notice(trigger.nick, 'Usage: `holiday_openholidays <country_code> [year]')
+        bot.notice(trigger.nick, 'Example: `holiday_openholidays US')
+        bot.notice(trigger.nick, 'Example: `holiday_openholidays US 2024')
         return
 
     parts = trigger.group(2).strip().upper().split()

@@ -100,12 +100,12 @@ APIS = [
 
 
 @plugin.command('brewery_openbrewery')
-@plugin.example('.brewery_openbrewery seattle')
-@plugin.example('.brewery_openbrewery 5494')
+@plugin.example('`brewery_openbrewery seattle')
+@plugin.example('`brewery_openbrewery 5494')
 def brewery_openbrewery(bot, trigger):
     """Search for breweries using Open Brewery DB API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .brewery_openbrewery <city/name> or .brewery_openbrewery <brewery_id>')
+        bot.notice(trigger.nick, 'Usage: `brewery_openbrewery <city/name> or .brewery_openbrewery <brewery_id>')
         return
 
     query = trigger.group(2).strip()

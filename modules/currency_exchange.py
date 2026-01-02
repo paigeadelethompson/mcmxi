@@ -70,14 +70,14 @@ APIS = [
 ]
 
 @plugin.command('currency_frankfurter')
-@plugin.example('.currency_frankfurter USD EUR')
-@plugin.example('.currency_frankfurter 100 USD EUR')
+@plugin.example('`currency_frankfurter USD EUR')
+@plugin.example('`currency_frankfurter 100 USD EUR')
 def currency_frankfurter(bot, trigger):
     """Convert currency using Frankfurter API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .currency_frankfurter [amount] <from> <to>')
-        bot.notice(trigger.nick, 'Example: .currency_frankfurter USD EUR')
-        bot.notice(trigger.nick, 'Example: .currency_frankfurter 100 USD EUR')
+        bot.notice(trigger.nick, 'Usage: `currency_frankfurter [amount] <from> <to>')
+        bot.notice(trigger.nick, 'Example: `currency_frankfurter USD EUR')
+        bot.notice(trigger.nick, 'Example: `currency_frankfurter 100 USD EUR')
         return
 
     parts = trigger.group(2).strip().upper().split()

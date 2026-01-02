@@ -35,13 +35,13 @@ APIS = [
 
 
 @plugin.command('phone_spec')
-@plugin.example('.phone_spec iphone 14')
-@plugin.example('.phone_spec samsung galaxy')
+@plugin.example('`phone_spec iphone 14')
+@plugin.example('`phone_spec samsung galaxy')
 def phone_spec(bot, trigger):
     """Get phone specifications using Phone Specification API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .phone_spec <phone_name>')
-        bot.notice(trigger.nick, 'Example: .phone_spec iphone 14')
+        bot.notice(trigger.nick, 'Usage: `phone_spec <phone_name>')
+        bot.notice(trigger.nick, 'Example: `phone_spec iphone 14')
         return
 
     phone_name = trigger.group(2).strip()

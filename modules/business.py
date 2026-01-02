@@ -72,12 +72,12 @@ APIS = [
 
 
 @plugin.command('domain_domainsdb')
-@plugin.example('.domain_domainsdb example')
-@plugin.example('.domain_domainsdb github')
+@plugin.example('`domain_domainsdb example')
+@plugin.example('`domain_domainsdb github')
 def domain_domainsdb(bot, trigger):
     """Search for registered domains using DomainsDB API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .domain_domainsdb <domain_name>')
+        bot.notice(trigger.nick, 'Usage: `domain_domainsdb <domain_name>')
         return
 
     domain = trigger.group(2).strip()

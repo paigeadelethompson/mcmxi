@@ -52,8 +52,8 @@ def shutdown(bot):
 
 
 @plugin.command('patent_patentsview')
-@plugin.example('.patent_patentsview python')
-@plugin.example('.patent_patentsview "machine learning"')
+@plugin.example('`patent_patentsview python')
+@plugin.example('`patent_patentsview "machine learning"')
 def patent_patentsview(bot, trigger):
     """Search US patents using PatentsView API."""
     # PatentsView: https://patentsview.org/apis/purpose
@@ -61,9 +61,9 @@ def patent_patentsview(bot, trigger):
     # Uses POST with JSON query format
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .patent_patentsview <search_term>')
-        bot.notice(trigger.nick, 'Example: .patent_patentsview python')
-        bot.notice(trigger.nick, 'Example: .patent_patentsview "machine learning"')
+        bot.notice(trigger.nick, 'Usage: `patent_patentsview <search_term>')
+        bot.notice(trigger.nick, 'Example: `patent_patentsview python')
+        bot.notice(trigger.nick, 'Example: `patent_patentsview "machine learning"')
         return
 
     search_term = trigger.group(2).strip()
@@ -142,8 +142,8 @@ def patent_patentsview(bot, trigger):
 
 
 @plugin.command('patent_uspto')
-@plugin.example('.patent_uspto 10000000')
-@plugin.example('.patent_uspto US10000000')
+@plugin.example('`patent_uspto 10000000')
+@plugin.example('`patent_uspto US10000000')
 def patent_uspto(bot, trigger):
     """Get US patent information using USPTO APIs."""
     # USPTO: https://www.uspto.gov/learning-and-resources/open-data-and-mobility
@@ -152,9 +152,9 @@ def patent_uspto(bot, trigger):
     # We'll provide helpful information and links
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .patent_uspto <patent_number>')
-        bot.notice(trigger.nick, 'Example: .patent_uspto 10000000')
-        bot.notice(trigger.nick, 'Example: .patent_uspto US10000000')
+        bot.notice(trigger.nick, 'Usage: `patent_uspto <patent_number>')
+        bot.notice(trigger.nick, 'Example: `patent_uspto 10000000')
+        bot.notice(trigger.nick, 'Example: `patent_uspto US10000000')
         bot.notice(trigger.nick, 'Note: USPTO requires web interface for full patent details.')
         return
 

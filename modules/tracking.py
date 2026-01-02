@@ -54,15 +54,15 @@ def shutdown(bot):
 
 
 @plugin.command('pincode_postalpincode')
-@plugin.example('.pincode_postalpincode 110001')
+@plugin.example('`pincode_postalpincode 110001')
 def pincode_postalpincode(bot, trigger):
     """Get Indian postal pincode details using PostalPinCode API."""
     # PostalPinCode: http://www.postalpincode.in/Api-Details
     # Endpoint: GET http://www.postalpincode.in/api/pincode/{pincode}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .pincode_postalpincode <pincode>')
-        bot.notice(trigger.nick, 'Example: .pincode_postalpincode 110001')
+        bot.notice(trigger.nick, 'Usage: `pincode_postalpincode <pincode>')
+        bot.notice(trigger.nick, 'Example: `pincode_postalpincode 110001')
         return
 
     pincode = trigger.group(2).strip()

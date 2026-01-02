@@ -10,7 +10,7 @@ from sopel import plugin
 
 # Ensure we can import common
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import HTTPClient, IRCFormatter, get_module_logger, register_apis
+from common import HTTPClient, get_command_prefix, IRCFormatter, get_module_logger, register_apis
 
 logger = get_module_logger(__name__)
 http = HTTPClient(max_size=5 * 1024 * 1024)
@@ -157,22 +157,22 @@ APIS = [
 
 @plugin.command('open_data')
 @plugin.command('opendata')
-@plugin.example('.open_data')
+@plugin.example('`open_data')
 def open_data_list(bot, trigger):
     """List all available Open Data APIs."""
     bot.say('Available Open Data APIs (19):')
     for i, api in enumerate(APIS[:10], 1):  # Show first 10
         bot.say(f"{i}. {api['name']} - {api['description'][:50]}")
     if len(APIS) > 10:
-        bot.say(f'... and {len(APIS) - 10} more. Use .open_data_info <name> for details')
+        bot.say(f'... and {len(APIS) - 10} more. Use {prefix}open_data_info <name> for details')
 
 
 @plugin.command('open_data_info')
-@plugin.example('.open_data_info <name>')
+@plugin.example('`open_data_info <name>')
 def open_data_info(bot, trigger):
     """Get information about a specific Open Data API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .open_data_info <api_name>')
+        bot.notice(trigger.nick, 'Usage: `open_data_info <api_name>')
         return
 
     search_name = trigger.group(2).strip().lower()
@@ -186,11 +186,11 @@ def open_data_info(bot, trigger):
 
 
 @plugin.command('open_data_search')
-@plugin.example('.open_data_search <query>')
+@plugin.example('`open_data_search <query>')
 def open_data_search(bot, trigger):
     """Search Open Data APIs by name or description."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .open_data_search <query>')
+        bot.notice(trigger.nick, 'Usage: `open_data_search <query>')
         return
 
     query = trigger.group(2).strip().lower()
@@ -211,13 +211,13 @@ def open_data_search(bot, trigger):
 
 
 @plugin.command('university_universitieslist')
-@plugin.example('.university_universitieslist mit')
-@plugin.example('.university_universitieslist usa')
+@plugin.example('`university_universitieslist mit')
+@plugin.example('`university_universitieslist usa')
 def university_universitieslist(bot, trigger):
     """Search for universities using Universities List API."""
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .university_universitieslist <name/country>')
-        bot.notice(trigger.nick, 'Example: .university_universitieslist mit')
+        bot.notice(trigger.nick, 'Usage: `university_universitieslist <name/country>')
+        bot.notice(trigger.nick, 'Example: `university_universitieslist mit')
         return
 
     query = trigger.group(2).strip()
@@ -267,16 +267,16 @@ def university_universitieslist(bot, trigger):
 
 
 @plugin.command('hamradio_callook')
-@plugin.example('.hamradio_callook K1ABC')
-@plugin.example('.hamradio_callook W1AW')
+@plugin.example('`hamradio_callook K1ABC')
+@plugin.example('`hamradio_callook W1AW')
 def hamradio_callook(bot, trigger):
     """Look up US ham radio callsign information using Callook.info API."""
     # Callook.info: https://callook.info
     # Endpoint: GET https://callook.info/{callsign}/json
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .hamradio_callook <callsign>')
-        bot.notice(trigger.nick, 'Example: .hamradio_callook K1ABC')
+        bot.notice(trigger.nick, 'Usage: `hamradio_callook <callsign>')
+        bot.notice(trigger.nick, 'Example: `hamradio_callook K1ABC')
         return
 
     callsign = trigger.group(2).strip().upper()
@@ -320,16 +320,16 @@ def hamradio_callook(bot, trigger):
 
 
 @plugin.command('metadata_microlink')
-@plugin.example('.metadata_microlink https://example.com')
-@plugin.example('.metadata_microlink https://github.com')
+@plugin.example('`metadata_microlink https://example.com')
+@plugin.example('`metadata_microlink https://github.com')
 def metadata_microlink(bot, trigger):
     """Extract structured metadata from a website using Microlink.io API."""
     # Microlink.io: https://microlink.io
     # Endpoint: GET https://api.microlink.io?url={url}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .metadata_microlink <url>')
-        bot.notice(trigger.nick, 'Example: .metadata_microlink https://example.com')
+        bot.notice(trigger.nick, 'Usage: `metadata_microlink <url>')
+        bot.notice(trigger.nick, 'Example: `metadata_microlink https://example.com')
         return
 
     url_input = trigger.group(2).strip()
@@ -373,15 +373,15 @@ def metadata_microlink(bot, trigger):
 
 
 @plugin.command('nobel_prize')
-@plugin.example('.nobel_prize einstein')
-@plugin.example('.nobel_prize physics')
+@plugin.example('`nobel_prize einstein')
+@plugin.example('`nobel_prize physics')
 def nobel_prize(bot, trigger):
     """Search Nobel Prize laureates using Nobel Prize API."""
     # Nobel Prize: https://www.nobelprize.org/about/developer-zone-2/
     # Endpoint: GET https://www.nobelprize.org/api/laureate
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .nobel_prize <search_term>')
+        bot.notice(trigger.nick, 'Usage: `nobel_prize <search_term>')
         bot.notice(trigger.nick, 'Examples: .nobel_prize einstein')
         bot.notice(trigger.nick, '          .nobel_prize physics')
         return
@@ -437,17 +437,17 @@ def nobel_prize(bot, trigger):
 
 
 @plugin.command('archive_search')
-@plugin.example('.archive_search computer')
-@plugin.example('.archive_search "the beatles"')
+@plugin.example('`archive_search computer')
+@plugin.example('`archive_search "the beatles"')
 def archive_search(bot, trigger):
     """Search Internet Archive using Archive.org API."""
     # Archive.org: https://archive.readme.io/docs
     # Endpoint: GET https://archive.org/advancedsearch.php?q={query}&output=json&rows={limit}
 
     if not trigger.group(2):
-        bot.notice(trigger.nick, 'Usage: .archive_search <search_term>')
-        bot.notice(trigger.nick, 'Example: .archive_search computer')
-        bot.notice(trigger.nick, 'Example: .archive_search "the beatles"')
+        bot.notice(trigger.nick, 'Usage: `archive_search <search_term>')
+        bot.notice(trigger.nick, 'Example: `archive_search computer')
+        bot.notice(trigger.nick, 'Example: `archive_search "the beatles"')
         return
 
     search_term = trigger.group(2).strip()

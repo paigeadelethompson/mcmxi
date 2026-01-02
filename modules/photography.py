@@ -56,8 +56,8 @@ APIS = [
 
 
 @plugin.command('image_lorempicsum')
-@plugin.example('.image_lorempicsum')
-@plugin.example('.image_lorempicsum 800')
+@plugin.example('`image_lorempicsum')
+@plugin.example('`image_lorempicsum 800')
 def image_lorempicsum(bot, trigger):
     """Get random placeholder image using Lorem Picsum API."""
     size = trigger.group(2).strip() if trigger.group(2) else None

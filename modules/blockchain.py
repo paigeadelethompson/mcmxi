@@ -58,7 +58,7 @@ def shutdown(bot):
 
 
 @plugin.command('chainpoint_info')
-@plugin.example('.chainpoint_info')
+@plugin.example('`chainpoint_info')
 def chainpoint_info(bot, trigger):
     """Get information about Chainpoint service."""
     # Chainpoint: https://tierion.com/chainpoint/
