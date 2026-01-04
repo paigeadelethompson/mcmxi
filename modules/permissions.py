@@ -113,9 +113,10 @@ class Permissions:
 
             # Create DEFAULT group if it doesn't exist
             # This group applies to users not in any other group
+            # Allow all commands by default
             if 'DEFAULT' not in groups:
                 groups['DEFAULT'] = {
-                    'commands': [],  # No commands by default
+                    'commands': ['*'],  # Allow all commands by default
                     'users': []  # This group doesn't have explicit users
                 }
 
@@ -179,9 +180,10 @@ class Permissions:
         nick = trigger.nick.lower()
         account = Permissions._get_user_account(bot, trigger.nick)
 
-        # If not registered, deny (except for public commands)
+        # Allow everyone - don't require account registration
+        # If not registered, still allow (permissive mode)
         if not account:
-            return False
+            return True
 
         with Permissions._lock:
             user_groups = Permissions._storage['user_groups']

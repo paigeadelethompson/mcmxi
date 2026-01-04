@@ -1,19 +1,21 @@
 [core]
 nick = MCMXI
+user = mcmxi
+modes = 
 host = irc.supernets.org
 port = 6697
 use_ssl = true
 verify_ssl = false
-channels = #mcmxi
-owner = mcmxi
-admins = mcmxi
-user = mcmxi
+channels = #!/bin/bash
+owner = sq
+owner_account = sq
 timeout = 120
 prefix = \`
 extra = modules/
-auth_method = nickserv
+auth_method = sasl
+auth_username = sq
 auth_password = changeme
-auth_target = NickServ
+auth_target = PLAIN
 flood_burst_lines = 999999
 flood_empty_wait = 0.125
 flood_refill_rate = 999999
@@ -37,12 +39,12 @@ exclude =
     countdown
     uptime
     find_updates
+    adminchannel
     invite
     tell
     emoticons
     clock
     calc
-    adminchannel
     reload
     pronouns
     units
@@ -53,12 +55,13 @@ exclude =
     find
 
 [admin]
-hold_ground = true
-auto_accept_invites = true
+hold_ground = false
+auto_accept_invites = false
 
 [log]
 logging = true
-filename = logs/sopel.log
 console = true
-level = INFO
+
+[jitsi]
+instances = meet.seattlematrix.org
 

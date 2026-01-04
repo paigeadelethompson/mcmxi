@@ -60,6 +60,67 @@ def _has_command_permission(bot, trigger, command: str) -> bool:
     return Permissions.has_command_permission(bot, trigger, command)
 
 
+def _get_configured_channels(bot) -> set:
+    """Get set of configured channels from config."""
+    configured = set()
+    try:
+        channels_config = bot.config.core.channels
+        if isinstance(channels_config, str):
+            # Single line format (deprecated but still supported)
+            channels = [ch.strip() for ch in channels_config.split(',')]
+        elif isinstance(channels_config, list):
+            # Multi-line format
+            channels = [ch.strip() for ch in channels_config]
+        else:
+            channels = []
+        
+        for channel in channels:
+            channel = channel.strip()
+            if channel:
+                # Normalize channel name (ensure it starts with #)
+                if not channel.startswith('#'):
+                    channel = '#' + channel
+                configured.add(channel.lower())
+    except Exception as e:
+        logger.error(f'Error getting configured channels: {e}')
+    
+    return configured
+
+
+def check_and_part_unconfigured_channels(bot, trigger):
+    """Part the channel if it's not in the configured channels list."""
+    configured_channels = _get_configured_channels(bot)
+    current_channel = trigger.sender.lower() if hasattr(trigger, 'sender') else None
+    if current_channel and current_channel.startswith('#'):
+        if current_channel not in configured_channels:
+            logger.info(f"Parting unconfigured channel: {current_channel}")
+            bot.part(current_channel)
+
+
+@plugin.event('join')
+def part_unconfigured_on_join(bot, trigger):
+    """Part any channel not in config immediately after joining it."""
+    # Only act if the bot itself joined
+    if trigger.nick == bot.nick:
+        check_and_part_unconfigured_channels(bot, trigger)
+
+
+# Patch Sopel event handler for all commands in this module
+from sopel import module
+for name, obj in list(globals().items()):
+    if hasattr(obj, '__call__') and hasattr(obj, 'commands'):
+        orig_func = obj
+        def make_wrapper(f):
+            def wrapper(bot, trigger, *args, **kwargs):
+                check_and_part_unconfigured_channels(bot, trigger)
+                return f(bot, trigger, *args, **kwargs)
+            wrapper.commands = getattr(f, 'commands', [])
+            wrapper.example = getattr(f, 'example', None)
+            wrapper.__doc__ = f.__doc__
+            return wrapper
+        globals()[name] = make_wrapper(orig_func)
+
+
 @plugin.command('kick')
 @plugin.example('`kick #channel username')
 @plugin.example('`kick username reason')

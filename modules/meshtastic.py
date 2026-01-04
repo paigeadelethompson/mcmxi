@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 import uuid
+import math
 from collections import defaultdict
 from typing import Dict, List, Optional
 
@@ -83,6 +84,46 @@ bot_instance = None
 
 # Available message types
 MESSAGE_TYPES = {'nodeinfo', 'position', 'telemetry', 'text', 'textmessage'}
+
+# --- Zipcode geolocation support ---
+_zipcode_data = []
+_zipcode_loaded = False
+
+def _load_zipcodes():
+    global _zipcode_data, _zipcode_loaded
+    if _zipcode_loaded:
+        return
+    zipcode_path = os.path.join(os.path.dirname(__file__), '../data/zipcode.txt')
+    try:
+        with open(zipcode_path, 'r') as f:
+            for line in f:
+                if line.startswith('zip') or line.startswith('//') or not line.strip():
+                    continue
+                parts = line.strip().split()
+                if len(parts) < 5:
+                    continue
+                zipcode, city, state, lat, lon = parts[:5]
+                try:
+                    lat = float(lat)
+                    lon = float(lon)
+                except Exception:
+                    continue
+                _zipcode_data.append((city.replace('_', ' '), state, lat, lon))
+        _zipcode_loaded = True
+    except Exception as e:
+        logger.error(f'Could not load zipcode.txt: {e}')
+        _zipcode_loaded = True
+
+def _nearest_city(lat, lon):
+    _load_zipcodes()
+    min_dist = float('inf')
+    nearest = None
+    for city, state, zlat, zlon in _zipcode_data:
+        d = math.hypot(lat - zlat, lon - zlon)
+        if d < min_dist:
+            min_dist = d
+            nearest = (city, state, zlat, zlon)
+    return nearest
 
 
 def _on_connect(client, userdata, flags, rc):
@@ -294,11 +335,15 @@ def _process_json_message(
                     shortname = node.get('shortname', node_id_hex)
                     lat = node['latitude']
                     lon = node['longitude']
+                    cityinfo = ''
+                    nearest = _nearest_city(lat, lon)
+                    if nearest:
+                        cityinfo = f" near {nearest[0]}, {nearest[1]}"
                     irc_msg = (
                         f"[{formatter.bold(region)}] "
                         f"{formatter.monospace(shortname)} "
                         f"({formatter.monospace(node_id_hex)}): "
-                        f"{formatter.bold('Position')} {lat:.4f}, {lon:.4f}"
+                        f"{formatter.bold('Position')} {lat:.4f}, {lon:.4f}{cityinfo}"
                     )
                     _send_to_channels(region, irc_msg, 'position')
             elif msg_type == 'telemetry':
@@ -524,17 +569,24 @@ def mesh_listen(bot, trigger):
     bot.say(
         f"Subscribing to {formatter.bold(REGIONS[region])} ({region}) MQTT topics..."
     )
+    # If the region has a known center, show it
+    # Otherwise, just show region name
+    # Try to show a sample city in the region
+    sample_city = None
+    for city, state, lat, lon in _zipcode_data:
+        if state.upper() == region or region in city.upper() or region in state.upper():
+            sample_city = (city, state, lat, lon)
+            break
+    if sample_city:
+        bot.say(f"Example city in {region}: {sample_city[0]}, {sample_city[1]} ({sample_city[2]:.4f}, {sample_city[3]:.4f})")
 
     if subscribe_region(region):
         bot.say(
             f"Now listening to {region}. Messages will be sent to this channel."
         )
         prefix = get_command_prefix(bot)
-        bot.notice(
-            trigger.nick,
-            f"Use {prefix}mesh_nodes to see discovered nodes, "
-            f"{prefix}mesh_messages to see recent messages"
-        )
+        bot.notice(trigger.nick, f"Use {prefix}mesh_nodes to see discovered nodes.")
+        bot.notice(trigger.nick, f"{prefix}mesh_messages to see recent messages")
     else:
         bot.notice(trigger.nick, 'Failed to subscribe. Check MQTT connection.')
 
@@ -755,6 +807,7 @@ def mesh_nodes(bot, trigger):
         if region_filter:
             bot.say(f'No nodes found for region {region_filter}')
         else:
+            prefix = get_command_prefix(bot)
             bot.say(
                 f'No nodes in cache. Use {prefix}mesh_listen <region> to start monitoring'
             )
@@ -847,9 +900,9 @@ def mesh_nodes(bot, trigger):
         bot.say(f"Showing {page_size} of {total_nodes} nodes. Use 'page N' to see more.")
 
 
-@plugin.command('mesh_node')
-@plugin.example('`mesh_node !7efeee00')
-@plugin.example('`mesh_node 2130636288')
+@plugin.command('mesh_node_info')
+@plugin.example('`mesh_node_info !7efeee00')
+@plugin.example('`mesh_node_info 2130636288')
 def mesh_node(bot, trigger):
     """Get detailed information about a Meshtastic node."""
     if not trigger.group(2):
@@ -876,6 +929,7 @@ def mesh_node(bot, trigger):
 
     if not node:
         bot.notice(trigger.nick, 'Node not found in cache')
+        prefix = get_command_prefix(bot)
         bot.notice(trigger.nick, f'Use {prefix}mesh_listen <region> to start monitoring')
         return
 
@@ -897,7 +951,11 @@ def mesh_node(bot, trigger):
         lat = node['latitude']
         lon = node['longitude']
         alt = node.get('altitude', 0)
-        bot.say(f"Position: {lat:.6f}, {lon:.6f} (alt: {alt}m)")
+        cityinfo = ''
+        nearest = _nearest_city(lat, lon)
+        if nearest:
+            cityinfo = f" near {nearest[0]}, {nearest[1]}"
+        bot.say(f"Position: {lat:.6f}, {lon:.6f} (alt: {alt}m){cityinfo}")
         bot.say(f"Map: https://www.google.com/maps?q={lat},{lon}")
 
     # Telemetry
@@ -942,6 +1000,7 @@ def mesh_messages(bot, trigger):
             messages = message_cache
 
     if not messages:
+        prefix = get_command_prefix(bot)
         bot.say(
             f'No messages in cache. Use {prefix}mesh_listen <region> to start monitoring'
         )
@@ -971,8 +1030,12 @@ def mesh_messages(bot, trigger):
             if lat_i and lon_i:
                 lat = lat_i / 1e7
                 lon = lon_i / 1e7
+                cityinfo = ''
+                nearest = _nearest_city(lat, lon)
+                if nearest:
+                    cityinfo = f" near {nearest[0]}, {nearest[1]}"
                 bot.say(
-                    f"[{region}] {node_id} ({msg_type}): {lat:.6f}, {lon:.6f}"
+                    f"[{region}] {node_id} ({msg_type}): {lat:.6f}, {lon:.6f}{cityinfo}"
                 )
         else:
             bot.say(f"[{region}] {node_id} ({msg_type})")
