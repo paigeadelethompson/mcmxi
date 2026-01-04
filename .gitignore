@@ -74,4 +74,4 @@ dmypy.json
 *.pid
 sopel.pid
 
-data/
+data/ripe.*
