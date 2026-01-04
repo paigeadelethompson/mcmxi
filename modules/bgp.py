@@ -442,7 +442,7 @@ def _process_object(cursor, lines: List[str], obj_type: str):
     if obj_type == 'aut-num':
         asn = _get_first_field_value(obj, 'aut-num', '').strip()
         if not asn:
-        return
+            return
 
         # Insert main record
         cursor.execute('''
@@ -548,7 +548,7 @@ def _process_object(cursor, lines: List[str], obj_type: str):
     elif obj_type == 'organisation':
         org_id = _get_first_field_value(obj, 'organisation', '').strip()
         if not org_id:
-        return
+            return
 
         # Insert main record
         cursor.execute('''
